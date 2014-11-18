@@ -23,7 +23,6 @@ namespace DeepCDZ
 			//Spawn a neuron of this specific type
 			virtual Neuron* spawn() const;
 
-
 			//------------------------------
 			//Update the activity of the neuron ( sum(inputs x weight) by default  )
 			virtual void update();

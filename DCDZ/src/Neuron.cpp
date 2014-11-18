@@ -6,7 +6,7 @@ namespace DeepCDZ
 		activity = 0.0;
 	}
 
-	Neuron* spawn()
+	Neuron* Neuron::spawn() const
 	{
 		return new Neuron();
 	}

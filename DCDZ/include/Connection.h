@@ -25,7 +25,7 @@ namespace DeepCDZ
 		Connection(Neuron* _src, Neuron* _dest, double _weight);
 		
 		//Create a connection between 2 neurons with a random weight
-		Connection(Neuron* _src, Neuron* _dest, double _minWeight = 0.0, double _maxWeight = 1.0);
+		Connection(Neuron* _src, Neuron* _dest, double _minWeight, double _maxWeight);
 	};
 
 }
