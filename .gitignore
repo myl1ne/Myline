@@ -42,9 +42,11 @@ Network Trash Folder
 Temporary Items
 .apdisk
 build/
-
+bin/
+obj/
+YarpCS/
+*.suo
 *.filters
 *.vcxproj
-*.sln
 *.cmake
 *.list
