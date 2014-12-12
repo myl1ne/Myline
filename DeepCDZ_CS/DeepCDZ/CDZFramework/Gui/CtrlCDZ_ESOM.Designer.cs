@@ -37,7 +37,7 @@
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(4, 4);
+            this.label1.Location = new System.Drawing.Point(3, 22);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(50, 13);
             this.label1.TabIndex = 0;
@@ -46,7 +46,7 @@
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(4, 17);
+            this.label2.Location = new System.Drawing.Point(3, 35);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(69, 13);
             this.label2.TabIndex = 1;
@@ -55,7 +55,7 @@
             // labelNeurons
             // 
             this.labelNeurons.AutoSize = true;
-            this.labelNeurons.Location = new System.Drawing.Point(71, 4);
+            this.labelNeurons.Location = new System.Drawing.Point(70, 22);
             this.labelNeurons.Name = "labelNeurons";
             this.labelNeurons.Size = new System.Drawing.Size(13, 13);
             this.labelNeurons.TabIndex = 2;
@@ -64,7 +64,7 @@
             // labelConnections
             // 
             this.labelConnections.AutoSize = true;
-            this.labelConnections.Location = new System.Drawing.Point(71, 17);
+            this.labelConnections.Location = new System.Drawing.Point(70, 35);
             this.labelConnections.Name = "labelConnections";
             this.labelConnections.Size = new System.Drawing.Size(13, 13);
             this.labelConnections.TabIndex = 3;
@@ -80,7 +80,11 @@
             this.Controls.Add(this.label2);
             this.Controls.Add(this.label1);
             this.Name = "CtrlCDZ_ESOM";
-            this.Size = new System.Drawing.Size(109, 42);
+            this.Size = new System.Drawing.Size(86, 87);
+            this.Controls.SetChildIndex(this.label1, 0);
+            this.Controls.SetChildIndex(this.label2, 0);
+            this.Controls.SetChildIndex(this.labelNeurons, 0);
+            this.Controls.SetChildIndex(this.labelConnections, 0);
             this.ResumeLayout(false);
             this.PerformLayout();
 

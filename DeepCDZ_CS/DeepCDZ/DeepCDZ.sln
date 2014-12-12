@@ -3,14 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
 VisualStudioVersion = 12.0.21005.1
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DeepCDZ", "DeepCDZ\DeepCDZ.csproj", "{224FF784-6344-4F09-90D4-A5F2CAC1CFB0}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Playground", "Playground\Playground.csproj", "{D79DC909-C6BA-42B2-8C41-DDA07FA2ADC7}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YarpCS", "..\YarpCS\YarpCS\YarpCS.csproj", "{9B1DA6CA-B828-4749-BC2F-56DFA35108D9}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hypocampus", "Hypocampus\Hypocampus.csproj", "{4E44F1C0-17A4-4210-9F28-274603017E35}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CDZFramework", "CDZFramework\CDZFramework.csproj", "{4CC67851-1445-4B71-9595-3F3839EBD346}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CDZFrameworkPlayground", "CDZFrameworkPlayground\CDZFrameworkPlayground.csproj", "{11B9D008-C7CB-473B-B80B-BDB6192F24AF}"
@@ -21,22 +13,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{224FF784-6344-4F09-90D4-A5F2CAC1CFB0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{224FF784-6344-4F09-90D4-A5F2CAC1CFB0}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{224FF784-6344-4F09-90D4-A5F2CAC1CFB0}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{224FF784-6344-4F09-90D4-A5F2CAC1CFB0}.Release|Any CPU.Build.0 = Release|Any CPU
-		{D79DC909-C6BA-42B2-8C41-DDA07FA2ADC7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{D79DC909-C6BA-42B2-8C41-DDA07FA2ADC7}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{D79DC909-C6BA-42B2-8C41-DDA07FA2ADC7}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{D79DC909-C6BA-42B2-8C41-DDA07FA2ADC7}.Release|Any CPU.Build.0 = Release|Any CPU
-		{9B1DA6CA-B828-4749-BC2F-56DFA35108D9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{9B1DA6CA-B828-4749-BC2F-56DFA35108D9}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{9B1DA6CA-B828-4749-BC2F-56DFA35108D9}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{9B1DA6CA-B828-4749-BC2F-56DFA35108D9}.Release|Any CPU.Build.0 = Release|Any CPU
-		{4E44F1C0-17A4-4210-9F28-274603017E35}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{4E44F1C0-17A4-4210-9F28-274603017E35}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{4E44F1C0-17A4-4210-9F28-274603017E35}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{4E44F1C0-17A4-4210-9F28-274603017E35}.Release|Any CPU.Build.0 = Release|Any CPU
 		{4CC67851-1445-4B71-9595-3F3839EBD346}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{4CC67851-1445-4B71-9595-3F3839EBD346}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4CC67851-1445-4B71-9595-3F3839EBD346}.Release|Any CPU.ActiveCfg = Release|Any CPU

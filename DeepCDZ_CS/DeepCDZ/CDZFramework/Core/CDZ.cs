@@ -91,6 +91,11 @@ namespace CDZFramework.Core
             if (onConvergence!=null)
                 onConvergence(this,null);
         }
+
+        public virtual float GetConfidence()
+        {
+            return 0.0f;
+        }
         #endregion
 
         //---------------------------------------------------------//

@@ -37,6 +37,10 @@ namespace CDZFramework.Core
         {
 
         }
+        public override float GetConfidence()
+        {
+            return 0.0f;
+        }
         #endregion
 
         //---------------------------------------------------------//

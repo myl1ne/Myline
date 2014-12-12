@@ -75,20 +75,22 @@ namespace CDZFramework.Core
 
         protected override void convergenceFrom(Modality mod)
         {
-            Parallel.For(0,Width,x=>
+            //Parallel.For(0,Width,x=>
+            for(int x=0;x<Width;x++)
             {
-                Parallel.For(0, Height, y =>
+                //Parallel.For(0, Height, y =>
+                for(int y=0;y<Width;y++)
                 {
                     Neuron n = neurons[x, y];
                     float contribution = 0.0f;
                     for (int i = 0; i < mod.Size; i++)
                     {
-                        contribution += 1.0f - (float)Math.Pow(mod.RealValues[i] - n.weights[mod][i], 2.0);
+                        contribution += (float)Math.Pow(mod.RealValues[i] - n.weights[mod][i], 2.0);
                     }
-                    contribution /= mod.Size;
+                    contribution = (float) ( Math.Sqrt(contribution) / (float)mod.Size );
                     n.activity += modalitiesInfluences[mod] * contribution;
-                });
-            });
+                }//);
+            }//);
         }
         protected override void postConvergence()
         {
@@ -96,15 +98,28 @@ namespace CDZFramework.Core
             float influenceSum = modalitiesInfluences.Values.Sum();
             winner = null;
             looser = null;
+            if (influenceSum == 0.0f)
+                influenceSum = 1.0f;
+
             foreach (Neuron n in neurons)
             {
                 n.activity /= influenceSum;
+                n.activity = 1 - n.activity;
                 if (winner == null || n.activity > winner.activity)
                     winner = n;
                 if (looser == null || n.activity < looser.activity)
                     looser = n;
             }
         }
+
+        public override float GetConfidence()
+        {
+            if (winner != null)
+                return winner.activity;
+            else
+                return 0.0f;
+        }
+
         #endregion
 
         //---------------------------------------------------------//
@@ -145,8 +160,8 @@ namespace CDZFramework.Core
         }
         bool considerForPrediction(Neuron n)
         {
-            //return n == winner;
-            return (n.activity >= 0.95*winner.activity);
+            return n == winner;
+            //return (n.activity >= 0.95*winner.activity);
         }
 
         #endregion
@@ -157,27 +172,41 @@ namespace CDZFramework.Core
 
         public override void Train()
         {
+            float elasticityFactor = (float)(-1.0f / Math.Pow(Elasticity, 2.0));
+            float winnerSquaredError = (float)Math.Pow(1.0-winner.activity, 2.0);
             float winX = coordinates[winner].x;
             float winY = coordinates[winner].y;
-            Parallel.For(0,Width,x=>
+            //Parallel.For(0,Width,x=>
+            for(int x=0;x<Width;x++)
             {
-                Parallel.For(0, Height, y =>
+                //Parallel.For(0, Height, y =>
+                for(int y=0;y<Height;y++)
                 {
                     Neuron n = neurons[x, y];
-                    float distance = MathHelpers.distance(x,y,winX,winY, Connectivity.torus);
-                    float distanceFactor = (float)Math.Exp(-(1 / Math.Pow(Elasticity, 2)) * (distance / winner.activity));
-                    
+                    float distanceSquared = (float)Math.Pow( MathHelpers.distance(x,y,winX,winY, Connectivity.torus)/Math.Sqrt(Width*Height), 2.0);
+                    float heta = (float)Math.Exp(elasticityFactor * distanceSquared / (float.Epsilon+winnerSquaredError));
+
                     foreach (Modality m in n.weights.Keys)
                     {
                         for (int i = 0; i < n.weights[m].Count(); i++)
                         {
-                            float dW = m.RealValues[i] - n.weights[m][i];
-                            n.weights[m][i] += LearningRate * modalitiesLearning[m] * distanceFactor * dW;
+                            float error;
+                            float dW;
+                            if (m.tag == "TopDown")
+                            {
+                                error = winner.weights[m][i] - n.weights[m][i];
+                            }
+                            else
+                            {
+                                error = m.RealValues[i] - n.weights[m][i];
+                            }
+                            dW = LearningRate * modalitiesLearning[m] * (1 - n.activity) * heta * error;
+                            n.weights[m][i] += dW;
                             MathHelpers.Clamp(ref n.weights[m][i], 0.0f, 1.0f);
                         }
                     }
-                });
-            });
+                }//);
+            }//);
         }
         #endregion
 

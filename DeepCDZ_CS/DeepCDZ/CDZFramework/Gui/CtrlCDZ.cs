@@ -10,11 +10,6 @@ using System.Windows.Forms;
 
 namespace CDZFramework.Gui
 {
-    public class ExpertSelectionArgs:EventArgs
-    {
-        public CDZFramework.Core.CDZ cdz = null;
-        public int expert = -1;
-    }
 
     public partial class CtrlCDZ : UserControl
     {
@@ -33,7 +28,21 @@ namespace CDZFramework.Gui
             this.cdz.onConvergence += cdz_onConvergence;
         }
 
-        protected virtual void cdz_onConvergence(object sender, EventArgs e)
+        private void cdz_onConvergence(object sender, EventArgs e)
+        {
+            if (this.progressBarConfidence.InvokeRequired)
+            {
+                this.Invoke(new EventHandler(cdz_onConvergence), sender, e);
+            }
+            else
+            {
+                this.progressBarConfidence.Value = (int)(cdz.GetConfidence() * 100.0);
+            }
+
+            cdz_onConvergenceChildren(sender, e);
+        }
+
+        protected virtual void cdz_onConvergenceChildren(object sender, EventArgs e)
         {
         }
 
@@ -44,5 +53,10 @@ namespace CDZFramework.Gui
                 onExpertSelected(this, args);
             }
         }
+    }
+    public class ExpertSelectionArgs : EventArgs
+    {
+        public CDZFramework.Core.CDZ cdz = null;
+        public int expert = -1;
     }
 }

@@ -16,7 +16,7 @@ namespace CDZFrameworkPlayground
 {
     public partial class Form1 : Form
     {
-        int INPUT_SIZE = 50;
+        int INPUT_SIZE = 100;
         int CONSECUTIVE_PRESENTATION = 1;
         class Record
         {
@@ -40,8 +40,8 @@ namespace CDZFrameworkPlayground
             InitializeComponent();
 
             List<int> structure = new List<int>();
-            structure.Add(10);
             structure.Add(5);
+            //structure.Add(10);
             structure.Add(1);
             //structure.Add(1);
 

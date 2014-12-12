@@ -82,9 +82,9 @@ namespace CDZFramework.Core
                 float contribution = 0.0f;
                 for (int i = 0; i < mod.Size; i++)
                 {
-                    contribution += 1.0f-(float)Math.Pow(mod.RealValues[i] - n.weights[mod][i], 2.0);
+                    contribution += (float)Math.Pow(mod.RealValues[i] - n.weights[mod][i], 2.0);
                 }
-                contribution /= mod.Size;
+                contribution = (float)(Math.Sqrt(contribution) / (float)mod.Size);
                 n.activity += modalitiesInfluences[mod] * contribution;
             }
         }
@@ -96,6 +96,7 @@ namespace CDZFramework.Core
             foreach (Neuron n in neurons)
             {
                 n.activity /= influenceSum;
+                n.activity = 1 - n.activity;
                 if (winner == null || n.activity > winner.activity)
                     winner = n;
             }
@@ -130,6 +131,15 @@ namespace CDZFramework.Core
                 Console.WriteLine("Added a new neuron with " + connections[n].Count + " connections.");
             }
         }
+
+        public override float GetConfidence()
+        {
+            if (winner != null)
+                return winner.activity;
+            else
+                return 0.0f;
+        }
+
         #endregion
 
         //---------------------------------------------------------//

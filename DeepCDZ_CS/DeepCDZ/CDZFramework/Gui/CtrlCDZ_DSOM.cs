@@ -18,11 +18,11 @@ namespace CDZFramework.Gui
             InitializeComponent();
         }
 
-        protected override void cdz_onConvergence(object sender, EventArgs e)
+        protected override void cdz_onConvergenceChildren(object sender, EventArgs e)
         {
             if (pictureBox1.InvokeRequired)
             {
-                this.Invoke(new EventHandler(cdz_onConvergence), sender, e);
+                this.Invoke(new EventHandler(cdz_onConvergenceChildren), sender, e);
             }
             else
             {

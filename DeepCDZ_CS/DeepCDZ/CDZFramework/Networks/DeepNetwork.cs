@@ -34,7 +34,7 @@ namespace CDZFramework.Networks
                     for (int y = 0; y < size; y++)
                     {
                         //layers[i][x, y] = new CDZ_ESOM();
-                        layers[i][x, y] = new CDZ_DSOM(10,10,0.01f);
+                        layers[i][x, y] = new CDZ_DSOM(15,15,0.1f,3.0f);
                         coordinates.Add(layers[i][x, y], new Coordinates3D(x,y,i));
                     }
                 }
@@ -71,7 +71,7 @@ namespace CDZFramework.Networks
                                 float distance = MathHelpers.distance(fx1, fy1, fx2, fy2, Connectivity.square) ;
                                 if (distance <= projectionRadius)
                                 {
-                                    Modality src = layers[i - 1][x1, y1].AddModality(interlayersModalitiesSize,0.0001f,0.0001f); //We do not learn from the topdown, but get influenced by it
+                                    Modality src = layers[i - 1][x1, y1].AddModality(interlayersModalitiesSize); //We do not learn from the topdown, but get influenced by it
                                     Modality dest = layers[i][x2, y2].AddModality(interlayersModalitiesSize);
                                     modalitiesLinks.Add(src, dest);
                                     modalitiesLinks.Add(dest,src);
@@ -105,8 +105,8 @@ namespace CDZFramework.Networks
                                     }
                                     else
                                     {
-                                        Modality src = layers[i][x1, y1].AddModality(interlayersModalitiesSize);
-                                        Modality dest = layers[i][x2, y2].AddModality(interlayersModalitiesSize);
+                                        Modality src = layers[i][x1, y1].AddModality(interlayersModalitiesSize,0.0f,0.0f);
+                                        Modality dest = layers[i][x2, y2].AddModality(interlayersModalitiesSize, 0.0f, 0.0f);
                                         modalitiesLinks.Add(src, dest);
                                         modalitiesLinks.Add(dest, src);
                                         src.tag = "Lateral";
@@ -133,33 +133,21 @@ namespace CDZFramework.Networks
             }
         }
 
-        public class ADirectionalCDZPairComparer : IEqualityComparer< KeyValuePair<CDZ,CDZ> >
-        {
-            public bool Equals(KeyValuePair<CDZ, CDZ> x, KeyValuePair<CDZ, CDZ> y)
-            {
-                return (x.Key == y.Key && x.Value == y.Value ) || (x.Key==y.Value && x.Value==y.Key);
-            }
-
-            public int GetHashCode(KeyValuePair<CDZ,CDZ> obj)
-            {
-                return (obj.Key.GetHashCode() * obj.Value.GetHashCode());
-            }
-        }
         public void Update()
         {
             //Activate / Predict
             foreach(CDZ[,] l in layers)
             {
-                //Parallel.For(0, l.GetLength(0), x => //Parallel.For(0, l.GetLength(0), x =>// for (int x = 0; x < l.GetLength(0); x++)
-                for (int x = 0; x < l.GetLength(0); x++)
+                Parallel.For(0, l.GetLength(0), x => //Parallel.For(0, l.GetLength(0), x =>// for (int x = 0; x < l.GetLength(0); x++)
+                //for (int x = 0; x < l.GetLength(0); x++)
                 {
-                    //Parallel.For(0, l.GetLength(1), y =>
-                    for (int y = 0; y < l.GetLength(1); y++)
+                    Parallel.For(0, l.GetLength(1), y =>
+                    //for (int y = 0; y < l.GetLength(1); y++)
                     {
                         l[x, y].Converge();
                         l[x, y].Diverge();
-                    }//);
-                }//);
+                    });
+                });
 
                 //Propage the information
                 foreach (var m in modalitiesLinks)
@@ -167,15 +155,30 @@ namespace CDZFramework.Networks
                     Modality src = m.Key;
                     Modality dest = m.Value;
                     dest.RealValues = src.PredictedValues; // potential bug, copy ?
+                    float confidence = src.parent.GetConfidence();
+
+                    if (confidence > 0.99f /*&& dest.tag != "TopDown"*/)
+                    {
+                        if (dest.tag != "TopDown")
+                            dest.parent.modalitiesInfluences[dest] = 1.0f;
+                        dest.parent.modalitiesLearning[dest] = 1.0f;
+                    }
+                    else
+                    {
+                        dest.parent.modalitiesInfluences[dest] = 0.0f;
+                        dest.parent.modalitiesLearning[dest] = 0.0f;
+                    }
                 }
             }
 
             //Train
             foreach (CDZ[,] l in layers)
             {
-                Parallel.For(0, l.GetLength(0), x =>//Parallel.For(0, l.GetLength(0), x =>// for (int x = 0; x < l.GetLength(0); x++)
+                //for (int x = 0; x < l.GetLength(0); x++)
+                Parallel.For(0, l.GetLength(0), x =>
                 {
-                    Parallel.For(0, l.GetLength(1), y =>//Parallel.For(0, l.GetLength(1), y =>//for (int y = 0; y < l.GetLength(1); y++)
+                    //for (int y = 0; y < l.GetLength(1); y++)
+                    Parallel.For(0, l.GetLength(1), y =>
                     {
                         l[x, y].Train();
                     });
@@ -241,9 +244,6 @@ namespace CDZFramework.Networks
         #region RF Plotting
         public void fillRFBmp(ref Bitmap bmp, CDZ cdz, int expert)
         {
-            //Create one image for each expert
-            int expertsCount = cdz.getExpertsNumber();
-
             //Get the rf of this expert
             Dictionary<Modality, float[]> rf = cdz.getReceptiveField(expert);
 
@@ -260,7 +260,7 @@ namespace CDZFramework.Networks
                     //Fill the BMP
                     Coordinates3D coo = coordinates[bottomMod.parent];
                     int sideSize = (int)Math.Sqrt(bottomMod.Size);
-                    Rectangle rect = new Rectangle((int)coo.x * sideSize, (int)coo.y * sideSize, sideSize, sideSize);
+                    Rectangle rect = new Rectangle((int)coo.y * sideSize, (int)coo.x * sideSize, sideSize, sideSize);
                     Graphics g = Graphics.FromImage(bmp);
                     g.DrawImage(Modality.toBitmap(rf[bottomMod]), rect);
                     g.Dispose();
@@ -268,10 +268,10 @@ namespace CDZFramework.Networks
                 else
                 {
                     //Recursive call
-                    fillRFBmp(ref bmp, modalitiesLinks[bottomMod].parent, expert);
+                    int bestBottomExpert = modalitiesLinks[bottomMod].parent.computeBestExpert(modalitiesLinks[bottomMod], rf[bottomMod]);
+                    fillRFBmp(ref bmp, modalitiesLinks[bottomMod].parent, bestBottomExpert);
                 }
             }
-
         }
 
         public Bitmap createInputBitmap()
@@ -283,5 +283,18 @@ namespace CDZFramework.Networks
         }
 
         #endregion
+
+        public class ADirectionalCDZPairComparer : IEqualityComparer<KeyValuePair<CDZ, CDZ>>
+        {
+            public bool Equals(KeyValuePair<CDZ, CDZ> x, KeyValuePair<CDZ, CDZ> y)
+            {
+                return (x.Key == y.Key && x.Value == y.Value) || (x.Key == y.Value && x.Value == y.Key);
+            }
+
+            public int GetHashCode(KeyValuePair<CDZ, CDZ> obj)
+            {
+                return (obj.Key.GetHashCode() * obj.Value.GetHashCode());
+            }
+        }
     }
 }
