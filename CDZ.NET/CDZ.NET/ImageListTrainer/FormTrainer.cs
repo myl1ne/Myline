@@ -40,20 +40,20 @@ namespace CDZNET.Applications.ImageListTrainer
             //                {0.0, 1.0, 0.0} }), 
             //            new Point2D(1,1))); //Step size
 
-            //network.pushLayer(
-            //    new Core.IONodeConvolution(
-            //        network.output.Size, //Input dimensions
-            //        new Core.IONodeAdaptiveSOM(
-            //            new Point2D(40, 40), //Size of the input (filter)
-            //            new Point2D(20, 20), //Size of the SOM
-            //            true //Use only winner or whole population
-            //            ),
-            //    new Point2D(20,20))); //Step size
+            network.pushLayer(
+                new Core.IONodeConvolution(
+                    new Point2D(28, 28), //Input dimensions
+                    new Core.IONodeAdaptiveSOM(
+                        new Point2D(4, 4), //Size of the input (filter)
+                        new Point2D(20, 20), //Size of the SOM
+                        true //Use only winner or whole population
+                        ),
+                new Point2D(4,4))); //Step size
 
             network.pushLayer(
                         new Core.IONodeAdaptiveSOM(
-                        new Point2D(28, 28), //Size of the input (filter)
-                        new Point2D(50, 50), //Size of the SOM
+                        network.output.Size, //Size of the input (filter)
+                        new Point2D(20, 20), //Size of the SOM
                         false //Use only winner or whole population
                         ));
             //network.pushLayer(
