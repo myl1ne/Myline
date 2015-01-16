@@ -22,7 +22,7 @@ namespace CDZNET.Applications.ImageListTrainer
         Random rand = new Random();
         string workingFolder;
 
-        List<Bitmap> trainingSet = new List<Bitmap>();
+        List<LabelledImage> trainingSet = new List<LabelledImage>();
 
         public FormTrainer()
         {
@@ -31,29 +31,29 @@ namespace CDZNET.Applications.ImageListTrainer
             network = new Core.IONodeDeepNet();
 
 
-            network.pushLayer(
-                    new Core.IONodeConvolution( 
-                        new Point2D(100,100), //Input dimensions
-                        new Core.IONodeKernel(new double[,] { //Type of filter used and its size
-                            {0.0, 1.0, 0.0}, 
-                            {1.0,-4.0, 1.0},
-                            {0.0, 1.0, 0.0} }), 
-                        new Point2D(1,1))); //Step size
+            //network.pushLayer(
+            //        new Core.IONodeConvolution( 
+            //            new Point2D(100,100), //Input dimensions
+            //            new Core.IONodeKernel(new double[,] { //Type of filter used and its size
+            //                {0.0, 1.0, 0.0}, 
+            //                {1.0,-4.0, 1.0},
+            //                {0.0, 1.0, 0.0} }), 
+            //            new Point2D(1,1))); //Step size
 
-            network.pushLayer(
-                new Core.IONodeConvolution(
-                    network.output.Size, //Input dimensions
-                    new Core.IONodeAdaptiveSOM(
-                        new Point2D(40, 40), //Size of the input (filter)
-                        new Point2D(20, 20), //Size of the SOM
-                        true //Use only winner or whole population
-                        ),
-                new Point2D(20,20))); //Step size
+            //network.pushLayer(
+            //    new Core.IONodeConvolution(
+            //        network.output.Size, //Input dimensions
+            //        new Core.IONodeAdaptiveSOM(
+            //            new Point2D(40, 40), //Size of the input (filter)
+            //            new Point2D(20, 20), //Size of the SOM
+            //            true //Use only winner or whole population
+            //            ),
+            //    new Point2D(20,20))); //Step size
 
             network.pushLayer(
                         new Core.IONodeAdaptiveSOM(
-                        network.output.Size, //Size of the input (filter)
-                        new Point2D(20, 20), //Size of the SOM
+                        new Point2D(28, 28), //Size of the input (filter)
+                        new Point2D(50, 50), //Size of the SOM
                         false //Use only winner or whole population
                         ));
             //network.pushLayer(
@@ -78,7 +78,7 @@ namespace CDZNET.Applications.ImageListTrainer
             {
                 if (!checkBoxPause.Checked)
                 {
-                    Bitmap bmp = trainingSet[dataIndex];
+                    Bitmap bmp = trainingSet[dataIndex].image;
                     network.input.fromBitmap(bmp);
                     network.BottomUp();
                     network.TopDown();
@@ -107,8 +107,20 @@ namespace CDZNET.Applications.ImageListTrainer
                 workingFolder = folderBrowserDialog1.SelectedPath;
                 foreach(string file in System.IO.Directory.EnumerateFiles(workingFolder, "*.png"))
                 {
-                    trainingSet.Add((Bitmap)Image.FromFile(@file, true));
+                    LabelledImage img = new LabelledImage();
+                    img.image = (Bitmap)Image.FromFile(@file, true);
+                    trainingSet.Add(img);
                 }
+                networkThread.Start();
+            }
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            if (folderBrowserDialog1.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                workingFolder = folderBrowserDialog1.SelectedPath;
+                trainingSet = DatabaseMNIST.loadData(workingFolder + "\\train-images.idx3-ubyte", workingFolder + "\\train-labels.idx1-ubyte");
                 networkThread.Start();
             }
         }

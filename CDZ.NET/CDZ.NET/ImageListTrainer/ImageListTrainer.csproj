@@ -44,12 +44,14 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DatabaseMNIST.cs" />
     <Compile Include="FormTrainer.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="FormTrainer.designer.cs">
       <DependentUpon>FormTrainer.cs</DependentUpon>
     </Compile>
+    <Compile Include="LabelledImage.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <EmbeddedResource Include="FormTrainer.resx">
