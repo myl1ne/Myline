@@ -1,0 +1,39 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+VisualStudioVersion = 12.0.21005.1
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CDZ.NET", "CDZ.NET\CDZ.NET.csproj", "{491CC76F-2292-4BC8-83D4-3CA857559F6F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImageListTrainer", "ImageListTrainer\ImageListTrainer.csproj", "{999AA878-C67E-4893-AA8D-A00A498A3227}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Applications", "Applications", "{90D21AF1-8C8A-4FC0-BC50-3A8B8E3E8B63}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CDZ.NET.GUI", "CDZ.NET.GUI\CDZ.NET.GUI.csproj", "{7785E7D6-6841-4F48-B9A2-3E7516972E17}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{491CC76F-2292-4BC8-83D4-3CA857559F6F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{491CC76F-2292-4BC8-83D4-3CA857559F6F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{491CC76F-2292-4BC8-83D4-3CA857559F6F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{491CC76F-2292-4BC8-83D4-3CA857559F6F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{999AA878-C67E-4893-AA8D-A00A498A3227}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{999AA878-C67E-4893-AA8D-A00A498A3227}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{999AA878-C67E-4893-AA8D-A00A498A3227}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{999AA878-C67E-4893-AA8D-A00A498A3227}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7785E7D6-6841-4F48-B9A2-3E7516972E17}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7785E7D6-6841-4F48-B9A2-3E7516972E17}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7785E7D6-6841-4F48-B9A2-3E7516972E17}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7785E7D6-6841-4F48-B9A2-3E7516972E17}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{999AA878-C67E-4893-AA8D-A00A498A3227} = {90D21AF1-8C8A-4FC0-BC50-3A8B8E3E8B63}
+	EndGlobalSection
+EndGlobal
