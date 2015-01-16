@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 namespace CDZNET.Core
 {
+    [Serializable]
     /// <summary>
     /// An IO node that adaptes itself after each BottomUp or TopDown call.
     /// Uses the SOM algorithm. 
@@ -43,14 +44,14 @@ namespace CDZNET.Core
             winner = new Point2D(0,0);
 
             //Assign the weights randomly
-            ForEach(weights, (x1,y1,x2,y2) => { weights[x1,y1,x2,y2] = MathHelpers.Rand.NextDouble(); });
+            ForEach(weights, false, (x1,y1,x2,y2) => { weights[x1,y1,x2,y2] = MathHelpers.Rand.NextDouble(); });
         }
 
         public override void bottomUpAdaptation(object sender, EventArgs argsNull)
         {
             double squaredRadius2 = 2 * learningRadius * learningRadius;
 
-            ForEach(weights, (x1, y1, x2, y2) =>
+            ForEach(weights,true, (x1, y1, x2, y2) =>
             {
                 double distanceToWinner = MathHelpers.distance(x2, y2, winner.X, winner.Y, Connectivity.torus, activity.GetLength(0), activity.GetLength(1));
                 double factor = Math.Exp(-(double)(distanceToWinner) / squaredRadius2);
@@ -66,10 +67,10 @@ namespace CDZNET.Core
         protected override void bottomUp()
         {
             //Zero the activity
-            ForEach(activity, (i,j) => { activity[i,j] = 0.0; });
+            ForEach(activity, true, (i,j) => { activity[i,j] = 0.0; });
 
             //Compute the activity
-            ForEach(weights, (x1, y1, x2, y2) =>
+            ForEach(weights, false, (x1, y1, x2, y2) =>
                 {
                     activity[x2, y2] += 1.0 - Math.Abs(weights[x1, y1, x2, y2] - input.x[x1, y1]);
                 }
@@ -79,7 +80,7 @@ namespace CDZNET.Core
             winner = new Point2D(0, 0);
             looser = new Point2D(0, 0);
             double inputDim = (double)(input.Width * input.Height);
-            ForEach(activity, (x, y) => 
+            ForEach(activity, false, (x, y) => 
             { 
                 activity[x,y] /= inputDim; 
                 if (activity[x,y]>activity[(int)winner.X, (int)winner.Y])
@@ -100,7 +101,7 @@ namespace CDZNET.Core
             double max = activity[(int)winner.X, (int)winner.Y];
             double range = max - min;
 
-            ForEach(activity, (x, y) =>
+            ForEach(activity, true, (x, y) =>
             {
                 activity[x, y] = (activity[x, y] - min) / range;
             });
@@ -123,13 +124,13 @@ namespace CDZNET.Core
             {
                 //Set the winner to 1.0, all the rest to 0.0 (not really required)
                 winner = new Point2D((int)(output.x[0, 0] * activity.GetLength(0)), (int)(output.x[1, 0] * activity.GetLength(1)));
-                ForEach(activity, (x, y) =>
+                ForEach(activity, true, (x, y) =>
                 {
                     activity[x, y] = (x == winner.X && y == winner.Y) ?  1.0 : 0.0;
                 });
 
                 //Directly take the winner RF as the prediction
-                ForEach(input.x, (x, y) =>
+                ForEach(input.x, true, (x, y) =>
                 {
                     input.x[x, y] = weights[x,y,(int)winner.X,(int)winner.Y];
                 });
@@ -141,7 +142,7 @@ namespace CDZNET.Core
 
                 //Zero the inputs
                 double[,] contribution = new double[input.Width, input.Height];
-                ForEach(input.x, (x, y) =>
+                ForEach(input.x,true, (x, y) =>
                 {
                     input.x[x, y] = 0.0;
                     contribution[x, y] = 0.0;
@@ -149,7 +150,7 @@ namespace CDZNET.Core
 
                 //Take the mean of the weights, weighted by the activity of the target
                 //Could be replaced by SoftMax
-                ForEach(weights, (x1, y1, x2, y2) =>
+                ForEach(weights,false, (x1, y1, x2, y2) =>
                 {
                     if (activity[x2, y2] > 0.95)
                     {
@@ -158,11 +159,54 @@ namespace CDZNET.Core
                     }
                 });
 
-                ForEach(input.x, (x, y) =>
+                ForEach(input.x,true, (x, y) =>
                 {
                     input.x[x, y] /= contribution[x, y];
                 });
             }
+        }
+
+        /// <summary>
+        /// Combine adapted clones of this node by fusing their modifications.
+        /// If possible.
+        /// </summary>
+        /// <param name="bag">An enumerable containing all the adapted nodes</param>
+        public override void fuse(IEnumerable<IONodeAdaptive> bag)
+        {
+            double[, , ,] deltaWeights = new double[weights.GetLength(0), weights.GetLength(1), weights.GetLength(2), weights.GetLength(3)];
+
+            foreach(IONodeAdaptive n in bag)
+            {
+                if (n is IONodeAdaptiveSOM)
+                {
+                    IONodeAdaptiveSOM clone = n as IONodeAdaptiveSOM;
+
+                    for (int i = 0; i < 4; i++)
+			        {
+			            if (weights.GetLength(i) != clone.weights.GetLength(i))
+                        {
+                            throw new Exception("Trying to fuse IONodeAdaptiveSOM of different dimensions.");
+                        }
+			        }
+
+                    ForEach(weights,false, (x1, y1, x2, y2) =>
+                        {
+                            deltaWeights[x1, y1, x2, y2] += (clone.weights[x1, y1, x2, y2] - weights[x1, y1, x2, y2]);
+                        }
+                        );
+                }
+                else
+                {
+                    throw new Exception("Trying to fuse IONodeAdaptive of different subtypes.");
+                }
+            }
+
+            //Add the mean of the deltas
+            ForEach(weights,true, (x1, y1, x2, y2) =>
+            {
+                weights[x1, y1, x2, y2] += deltaWeights[x1, y1, x2, y2] / (double)bag.Count();
+            }
+            );
         }
 
         #region Foreach helpers
@@ -170,30 +214,62 @@ namespace CDZNET.Core
         /// Use delegate instead of multiplying the foor loops
         /// </summary>
         /// <param name="operation"></param>
-        private void ForEach(double[,,,] array, Operation4D operation)
+        private void ForEach(double[,,,] array, bool isParallel, Operation4D operation)
         {
-            for (int i = 0; i < array.GetLength(0); i++)
+            if (isParallel)
             {
-                for (int j = 0; j < array.GetLength(1); j++)
+                Parallel.For(0, array.GetLength(0), i =>
                 {
-                    for (int mi = 0; mi < array.GetLength(2); mi++)
+                    Parallel.For(0, array.GetLength(1), j =>
                     {
-                        for (int mj = 0; mj < array.GetLength(3); mj++)
+                        Parallel.For(0, array.GetLength(2), mi =>
                         {
-                            operation(i, j, mi, mj);
+                            Parallel.For(0, array.GetLength(3), mj =>
+                            {
+                                operation(i, j, mi, mj);
+                            });
+                        });
+                    });
+                });
+            }
+            else
+            {
+                for (int i = 0; i < array.GetLength(0); i++)
+                {
+                    for (int j = 0; j < array.GetLength(1); j++)
+                    {
+                        for (int mi = 0; mi < array.GetLength(2); mi++)
+                        {
+                            for (int mj = 0; mj < array.GetLength(3); mj++)
+                            {
+                                operation(i, j, mi, mj);
+                            }
                         }
                     }
                 }
             }
         }
 
-        private void ForEach(double[,] array, Operation2D operation)
+        private void ForEach(double[,] array, bool isParallel, Operation2D operation)
         {
-            for (int mi = 0; mi < array.GetLength(0); mi++)
+            if (isParallel)
             {
-                for (int mj = 0; mj < array.GetLength(1); mj++)
+                Parallel.For(0, array.GetLength(0), mi =>
                 {
-                    operation(mi, mj);
+                    Parallel.For(0, array.GetLength(1), mj =>
+                    {
+                        operation(mi, mj);
+                    });
+                });
+            }
+            else
+            {
+                for (int mi = 0; mi < array.GetLength(0); mi++)
+                {
+                    for (int mj = 0; mj < array.GetLength(1); mj++)
+                    {
+                        operation(mi, mj);
+                    }
                 }
             }
         }

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 namespace CDZNET.Core
 {
+    [Serializable]
     public class IONodeDeepNet:IONode
     {
         protected List<IONode> layers;

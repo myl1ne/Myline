@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 namespace CDZNET.Core
 {
+    [Serializable]
     /// <summary>
     /// An IONode that compute the min (bottomup) or duplicate (topdown)
     /// </summary>

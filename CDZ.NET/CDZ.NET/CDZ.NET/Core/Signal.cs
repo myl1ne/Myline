@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 namespace CDZNET.Core
 {
+    [Serializable]
     public class Signal
     {
         public double[,] x;
@@ -17,5 +18,6 @@ namespace CDZNET.Core
         {
             x = new double[w, h];
         }
+
     }
 }

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 namespace CDZNET
 {
+    [Serializable]
     public class Point3D: Point2D
     {
         public float Z = 0.0f;

@@ -36,5 +36,15 @@ namespace CDZNET.Core
 
         }
 
+        /// <summary>
+        /// Combine adapted clones of this node by fusing their modifications.
+        /// If possible.
+        /// </summary>
+        /// <param name="bag">A bag containing all the adapted nodes</param>
+        public override void fuse(IEnumerable<IONodeAdaptive> bag)
+        {
+            throw new NotImplementedException("The fuse mechanism has not been implemented for this node type.");
+        }
+
     }
 }

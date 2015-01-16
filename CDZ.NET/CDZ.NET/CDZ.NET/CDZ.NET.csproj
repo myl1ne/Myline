@@ -44,8 +44,10 @@
     <Compile Include="Core\IONode.cs" />
     <Compile Include="Core\IONodeAdaptive.cs" />
     <Compile Include="Core\IONodeAdaptiveSOM.cs" />
+    <Compile Include="Core\IONodeConvolutionParallel.cs" />
     <Compile Include="Core\IONodeConvolution.cs" />
     <Compile Include="Core\IONodeDeepNet.cs" />
+    <Compile Include="Core\IONodeKernel.cs" />
     <Compile Include="Core\IONodeMax.cs" />
     <Compile Include="Core\IONodeMean.cs" />
     <Compile Include="Core\IONodeMin.cs" />
@@ -53,6 +55,7 @@
     <Compile Include="Core\Templates\IONodeAdaptiveTemplate.cs" />
     <Compile Include="Core\Templates\IONodeTemplate.cs" />
     <Compile Include="Helpers\MathHelpers.cs" />
+    <Compile Include="Helpers\ObjectCopier.cs" />
     <Compile Include="Helpers\Point3D.cs" />
     <Compile Include="Helpers\Point2D.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

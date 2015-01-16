@@ -30,16 +30,32 @@ namespace CDZNET.Applications.ImageListTrainer
 
             network = new Core.IONodeDeepNet();
 
+
             network.pushLayer(
-                new Core.IONodeConvolution( 
-                    new Point2D(100, 100), //Input dimensions
+                    new Core.IONodeConvolution( 
+                        new Point2D(100,100), //Input dimensions
+                        new Core.IONodeKernel(new double[,] { //Type of filter used and its size
+                            {0.0, 1.0, 0.0}, 
+                            {1.0,-4.0, 1.0},
+                            {0.0, 1.0, 0.0} }), 
+                        new Point2D(1,1))); //Step size
+
+            network.pushLayer(
+                new Core.IONodeConvolution(
+                    network.output.Size, //Input dimensions
                     new Core.IONodeAdaptiveSOM(
-                        new Point2D(20, 20), //Size of the input (filter)
+                        new Point2D(40, 40), //Size of the input (filter)
                         new Point2D(20, 20), //Size of the SOM
                         true //Use only winner or whole population
                         ),
                 new Point2D(20,20))); //Step size
 
+            network.pushLayer(
+                        new Core.IONodeAdaptiveSOM(
+                        network.output.Size, //Size of the input (filter)
+                        new Point2D(20, 20), //Size of the SOM
+                        false //Use only winner or whole population
+                        ));
             //network.pushLayer(
             //    new Core.IONodeConvolution( 
             //        new Point(320,240), //Input dimensions

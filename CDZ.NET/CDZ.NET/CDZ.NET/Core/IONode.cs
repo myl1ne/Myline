@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 namespace CDZNET.Core
 {
+    [Serializable]
     /// <summary>
     /// The base class to handle all bidirectional IO transformations
     /// </summary>

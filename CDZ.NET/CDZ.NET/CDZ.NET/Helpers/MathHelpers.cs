@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 
 namespace CDZNET
 {
-
     public enum Connectivity { square, torus };
 
     public static class MathHelpers
