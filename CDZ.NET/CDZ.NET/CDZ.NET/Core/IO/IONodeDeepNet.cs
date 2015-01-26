@@ -33,7 +33,7 @@ namespace CDZNET.Core
         protected override void bottomUp()
         {
             //Copy the input of the network to the first layer
-            Array.Copy(input.x, layers.First().input.x, input.x.Length);
+            Array.Copy(input.reality, layers.First().input.reality, input.reality.Length);
 
             for (int i = 0; i < layers.Count; i++)
             {
@@ -41,17 +41,17 @@ namespace CDZNET.Core
 
                 //Copy output to the next layer's input
                 if (layers[i] != layers.Last())
-                    Array.Copy(layers[i].output.x, layers[i + 1].input.x, layers[i].output.x.Length);
+                    Array.Copy(layers[i].output.prediction, layers[i + 1].input.reality, layers[i].output.prediction.Length);
             }
 
             //Copy the output of the last layer to the output of the network
-            Array.Copy(layers.Last().output.x, output.x, layers.Last().output.x.Length);
+            Array.Copy(layers.Last().output.prediction, output.prediction, layers.Last().output.prediction.Length);
         }
 
         protected override void topDown()
         {            
             //Copy the output of the network to the output of the last layer
-            Array.Copy(output.x, layers.Last().output.x, output.x.Length);
+            Array.Copy(output.prediction, layers.Last().output.reality, output.reality.Length);
 
             for (int i = layers.Count-1; i >=0 ; i--)
             {
@@ -59,11 +59,11 @@ namespace CDZNET.Core
 
                 //Copy input to the previous layer's output
                 if (layers[i] != layers.First())
-                    Array.Copy(layers[i].input.x, layers[i - 1].output.x, layers[i].input.x.Length);
+                    Array.Copy(layers[i].input.prediction, layers[i - 1].output.reality, layers[i].input.prediction.Length);
             }
 
             //Copy the input of the first layer to the input of the network
-            Array.Copy(layers.First().input.x, input.x, input.x.Length);
+            Array.Copy(layers.First().input.prediction, input.prediction, input.prediction.Length);
         }
 
     }

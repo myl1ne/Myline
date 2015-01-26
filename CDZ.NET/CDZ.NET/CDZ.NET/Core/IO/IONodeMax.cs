@@ -21,12 +21,12 @@ namespace CDZNET.Core
         /// </summary>
         protected override void bottomUp()
         {
-            output.x[0, 0] = double.NegativeInfinity;
+            output.prediction[0, 0] = double.NegativeInfinity;
             for (int xI = 0; xI < input.Width; xI++)
             {
                 for (int yI = 0; yI < input.Height; yI++)
                 {
-                    output.x[0, 0] = Math.Max(output.x[0, 0], input.x[xI, yI]);
+                    output.prediction[0, 0] = Math.Max(output.reality[0, 0], input.reality[xI, yI]);
                 }
             }
         }
@@ -40,7 +40,7 @@ namespace CDZNET.Core
             {
                 for (int yI = 0; yI < input.Height; yI++)
                 {
-                    input.x[xI, yI] = output.x[0, 0];
+                    input.prediction[xI, yI] = output.reality[0, 0];
                 }
             }
         }

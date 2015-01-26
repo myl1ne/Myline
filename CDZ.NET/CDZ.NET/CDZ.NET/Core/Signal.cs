@@ -9,14 +9,16 @@ namespace CDZNET.Core
     [Serializable]
     public class Signal
     {
-        public double[,] x;
-        public int Width { get { return x.GetLength(0); } }
-        public int Height { get { return x.GetLength(1); } }
+        public double[,] reality;
+        public double[,] prediction;
+        public int Width { get { return reality.GetLength(0); } }
+        public int Height { get { return reality.GetLength(1); } }
         public Point2D Size { get { return new Point2D(Width, Height); } }
 
         public Signal(int w, int h)
         {
-            x = new double[w, h];
+            reality = new double[w, h];
+            prediction = new double[w, h];
         }
 
     }

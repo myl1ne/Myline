@@ -32,7 +32,7 @@ namespace CDZNET.Applications.ImageListTrainer
 
             List<LabelledImage> db = new List<LabelledImage>();
 
-            for (int cnt = 0; cnt < 1000/*imageCount*/; cnt++)
+            for (int cnt = 0; cnt < 1000 /*imageCount*/; cnt++)
             {
                 LabelledImage img = new LabelledImage();
                 img.image = new System.Drawing.Bitmap(numRows, numCols, System.Drawing.Imaging.PixelFormat.Format32bppRgb);

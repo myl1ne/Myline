@@ -40,20 +40,27 @@ namespace CDZNET.Applications.ImageListTrainer
             //                {0.0, 1.0, 0.0} }), 
             //            new Point2D(1,1))); //Step size
 
-            network.pushLayer(
-                new Core.IONodeConvolution(
-                    new Point2D(28, 28), //Input dimensions
-                    new Core.IONodeAdaptiveSOM(
-                        new Point2D(4, 4), //Size of the input (filter)
-                        new Point2D(20, 20), //Size of the SOM
-                        true //Use only winner or whole population
-                        ),
-                new Point2D(4,4))); //Step size
+            //network.pushLayer(
+            //    new Core.IONodeConvolution(
+            //        new Point2D(28, 28), //Input dimensions
+            //        new Core.IONodeAdaptiveSOM(
+            //            new Point2D(4, 4), //Size of the input (filter)
+            //            new Point2D(20, 20), //Size of the SOM
+            //            true //Use only winner or whole population
+            //            ),
+            //    new Point2D(4,4))); //Step size
+
+            //network.pushLayer(
+            //            new Core.IONodeAdaptiveSOM(
+            //            network.output.Size, //Size of the input (filter)
+            //            new Point2D(20, 20), //Size of the SOM
+            //            false //Use only winner or whole population
+            //            ));
 
             network.pushLayer(
                         new Core.IONodeAdaptiveSOM(
-                        network.output.Size, //Size of the input (filter)
-                        new Point2D(20, 20), //Size of the SOM
+                        new Point2D(28, 28), //Size of the input (filter)
+                        new Point2D(30, 30), //Size of the SOM
                         false //Use only winner or whole population
                         ));
             //network.pushLayer(
@@ -79,7 +86,7 @@ namespace CDZNET.Applications.ImageListTrainer
                 if (!checkBoxPause.Checked)
                 {
                     Bitmap bmp = trainingSet[dataIndex].image;
-                    network.input.fromBitmap(bmp);
+                    network.input.fromBitmap(bmp, true);
                     network.BottomUp();
                     network.TopDown();
 
@@ -117,6 +124,7 @@ namespace CDZNET.Applications.ImageListTrainer
 
         private void button2_Click(object sender, EventArgs e)
         {
+            folderBrowserDialog1.SelectedPath = Application.StartupPath;
             if (folderBrowserDialog1.ShowDialog() == System.Windows.Forms.DialogResult.OK)
             {
                 workingFolder = folderBrowserDialog1.SelectedPath;

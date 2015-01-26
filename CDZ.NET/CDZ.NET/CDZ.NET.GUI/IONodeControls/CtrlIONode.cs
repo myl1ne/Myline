@@ -37,10 +37,10 @@ namespace CDZNET.GUI
                 this.Invoke(new EventHandler(node_onTopDown), sender, e);
             else
             {
-                pictureBox3.Image = node.output.toBitmap();
+                pictureBox3.Image = node.output.toBitmap(true, Color.Black, Color.White);
                 pictureBox3.Refresh();
 
-                pictureBox4.Image = node.input.toBitmap();
+                pictureBox4.Image = node.input.toBitmap(false, Color.Black, Color.White);
                 pictureBox4.Refresh();
             }
         }
@@ -62,10 +62,10 @@ namespace CDZNET.GUI
                 this.Invoke(new EventHandler(node_onBottomUp), sender, e);
             else
             {
-                pictureBox1.Image = node.input.toBitmap();
+                pictureBox1.Image = node.input.toBitmap(true, Color.Black, Color.White);
                 pictureBox1.Refresh();
 
-                pictureBox2.Image = node.output.toBitmap();
+                pictureBox2.Image = node.output.toBitmap(false, Color.Blue, Color.Green, Color.Red);
                 pictureBox2.Refresh();
             }
         }

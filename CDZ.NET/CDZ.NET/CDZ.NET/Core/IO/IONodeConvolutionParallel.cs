@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Collections.Concurrent;
 
 namespace CDZNET.Core
 {
@@ -17,12 +18,12 @@ namespace CDZNET.Core
     /// In the general case, the output of this class is of size inputSize * filter.ouputSize / stepSize
     /// 
     /// </summary>
-    public class IONodeConvolution:IONode
+    public class IONodeConvolutionParallel:IONode
     {
         IONode filter;
         Point2D stepSize;
 
-        public IONodeConvolution(Point2D inputDim, IONode filter, Point2D stepSize )
+        public IONodeConvolutionParallel(Point2D inputDim, IONode filter, Point2D stepSize)
             : base(inputDim, new Point2D(filter.output.Width * inputDim.X /stepSize.X , filter.output.Height * inputDim.Y / stepSize.Y))
         {
             this.filter = filter;
@@ -38,36 +39,64 @@ namespace CDZNET.Core
         /// </summary>
         protected override void bottomUp()
         {
-            //We pass all components of the input signal
-            for (int xI = 0; xI <= input.Width - stepSize.X; xI += (int)stepSize.X)
+            System.Collections.Concurrent.ConcurrentStack<IONode> filterClones = new ConcurrentStack<IONode>();
+            int stepsWidth = (int)(input.Width / stepSize.X);
+            int stepsHeight = (int)(input.Height/ stepSize.Y);
+
+            int totalIterations = stepsWidth * stepsHeight;
+
+            for (int i = 0; i < totalIterations; i++)
             {
-                for (int yI = 0; yI <= input.Height - stepSize.Y; yI += (int)stepSize.Y)
+                IONode clone = ObjectCopier.Clone(filter);
+                filterClones.Push(clone);
+            }
+
+            System.Collections.Concurrent.ConcurrentStack<IONode> filterClonesUsed = new ConcurrentStack<IONode>();
+
+            //We pass all components of the input signal
+            Parallel.For(0, stepsWidth, stepX =>
+            {
+                int xI = stepX * (int)stepSize.X;
+                Parallel.For(0, stepsHeight, stepY =>
                 {
+                    int yI = stepY * (int)stepSize.Y;
+
+                    //Clone the filter
+                    IONode clone;
+                    while (!filterClones.TryPop(out clone)) ;
+
                     //We construct the filter input based on its dimensions
-                    for (int xF = 0; xF < filter.input.Width; xF++)
+                    for (int xF = 0; xF < clone.input.Width; xF++)
                     {
-                        for (int yF = 0; yF < filter.input.Height; yF++)
+                        for (int yF = 0; yF < clone.input.Height; yF++)
                         {
-                            int x = xI - filter.input.Width / 2 + xF;
-                            int y = yI - filter.input.Height / 2 + yF;
-                            x = Math.Min(input.Width-1, Math.Max(x,0));
-                            y = Math.Min(input.Height-1, Math.Max(y,0));
-                            filter.input.x[xF, yF] = input.x[x, y];
-                        }      
+                            int x = xI - clone.input.Width / 2 + xF;
+                            int y = yI - clone.input.Height / 2 + yF;
+                            x = Math.Min(input.Width - 1, Math.Max(x, 0));
+                            y = Math.Min(input.Height - 1, Math.Max(y, 0));
+                            clone.input.reality[xF, yF] = input.reality[x, y];
+                        }
                     }
 
-                    //We apply the filter
-                    filter.BottomUp();
+                    //We apply the clone
+                    clone.BottomUp();
 
-                    //We copy the result of the filter to the output
-                    for (int xF = 0; xF < filter.output.Width; xF++)
+                    //We copy the result of the clone to the output
+                    for (int xF = 0; xF < clone.output.Width; xF++)
                     {
-                        for (int yF = 0; yF < filter.output.Height; yF++)
+                        for (int yF = 0; yF < clone.output.Height; yF++)
                         {
-                            output.x[(int)(xI / stepSize.X) * filter.output.Width + xF, (int)(yI / stepSize.Y) * filter.output.Height + yF] = filter.output.x[xF, yF];
-                        }      
+                            output.prediction[(int)(xI / stepSize.X) * clone.output.Width + xF, (int)(yI / stepSize.Y) * clone.output.Height + yF] = clone.output.prediction[xF, yF];
+                        }
                     }
-                }
+                    filterClonesUsed.Push(clone);
+                });
+            });
+
+            if (filter is IONodeAdaptive)
+            {
+                IEnumerable<IONodeAdaptive> casted = filterClonesUsed.Cast<IONodeAdaptive>();
+                (filter as IONodeAdaptive).fuse(casted);
             }
         }
 
@@ -83,7 +112,7 @@ namespace CDZNET.Core
             {
                 for (int yI = 0; yI < input.Height; yI++)
                 {
-                    input.x[xI, yI] = 0.0;
+                    input.prediction[xI, yI] = 0.0;
                     inputContributions[xI, yI] = 0.0;
                 }
             }
@@ -98,7 +127,7 @@ namespace CDZNET.Core
                     {
                         for (int yF = 0; yF < filter.output.Height; yF++)
                         {
-                            filter.output.x[xF, yF] = output.x[(int)(xI / stepSize.X) * filter.output.Width + xF, (int)(yI / stepSize.Y) * filter.output.Height + yF]; 
+                            filter.output.reality[xF, yF] = output.reality[(int)(xI / stepSize.X) * filter.output.Width + xF, (int)(yI / stepSize.Y) * filter.output.Height + yF]; 
                         }
                     }
 
@@ -114,7 +143,7 @@ namespace CDZNET.Core
                             int y = yI - filter.input.Height / 2 + yF;
                             x = Math.Min(input.Width - 1, Math.Max(x, 0));
                             y = Math.Min(input.Height - 1, Math.Max(y, 0));
-                            input.x[x, y] += filter.input.x[xF, yF];
+                            input.prediction[x, y] += filter.input.prediction[xF, yF];
                             inputContributions[x, y] += 1;
                         }
                     }
@@ -126,7 +155,7 @@ namespace CDZNET.Core
             {
                 for (int yI = 0; yI < input.Height; yI++)
                 {
-                    input.x[xI, yI] /= inputContributions[xI, yI];
+                    input.prediction[xI, yI] /= inputContributions[xI, yI];
                 }
             }
         }

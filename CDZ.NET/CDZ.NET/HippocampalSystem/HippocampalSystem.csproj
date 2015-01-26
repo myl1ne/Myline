@@ -4,15 +4,16 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{491CC76F-2292-4BC8-83D4-3CA857559F6F}</ProjectGuid>
-    <OutputType>Library</OutputType>
+    <ProjectGuid>{9F67387D-1FA7-4CA9-9594-EB75E9345858}</ProjectGuid>
+    <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>CDZNET</RootNamespace>
-    <AssemblyName>CDZ.NET</AssemblyName>
+    <RootNamespace>HippocampalSystem</RootNamespace>
+    <AssemblyName>HippocampalSystem</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -22,6 +23,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
@@ -41,26 +43,32 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Core\IO\IONode.cs" />
-    <Compile Include="Core\IO\IONodeAdaptive.cs" />
-    <Compile Include="Core\IO\IONodeAdaptiveSOM.cs" />
-    <Compile Include="Core\IO\IONodeConvolutionParallel.cs" />
-    <Compile Include="Core\IO\IONodeConvolution.cs" />
-    <Compile Include="Core\IO\IONodeDeepNet.cs" />
-    <Compile Include="Core\IO\IONodeKernel.cs" />
-    <Compile Include="Core\IO\IONodeMax.cs" />
-    <Compile Include="Core\IO\IONodeMean.cs" />
-    <Compile Include="Core\IO\IONodeMin.cs" />
-    <Compile Include="Core\IO\IONodeGridCells.cs" />
-    <Compile Include="Core\MM\MMNode.cs" />
-    <Compile Include="Core\Signal.cs" />
-    <Compile Include="Core\Templates\IONodeAdaptiveTemplate.cs" />
-    <Compile Include="Core\Templates\IONodeTemplate.cs" />
-    <Compile Include="Helpers\MathHelpers.cs" />
-    <Compile Include="Helpers\ObjectCopier.cs" />
-    <Compile Include="Helpers\Point3D.cs" />
-    <Compile Include="Helpers\Point2D.cs" />
+    <Compile Include="HippocampusForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="HippocampusForm.Designer.cs">
+      <DependentUpon>HippocampusForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\CDZ.NET.GUI\CDZ.NET.GUI.csproj">
+      <Project>{7785e7d6-6841-4f48-b9a2-3e7516972e17}</Project>
+      <Name>CDZ.NET.GUI</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\CDZ.NET\CDZ.NET.csproj">
+      <Project>{491cc76f-2292-4bc8-83d4-3ca857559f6f}</Project>
+      <Name>CDZ.NET</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="HippocampusForm.resx">
+      <DependentUpon>HippocampusForm.cs</DependentUpon>
+    </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

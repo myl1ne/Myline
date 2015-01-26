@@ -25,15 +25,15 @@ namespace CDZNET.Core
         /// </summary>
         protected override void bottomUp()
         {
-            output.x[0, 0] = 0.0;
+            output.prediction[0, 0] = 0.0;
             for (int xI = 0; xI < input.Width; xI++)
             {
                 for (int yI = 0; yI < input.Height; yI++)
                 {
-                    output.x[0, 0] += input.x[xI, yI] * kernel[xI,yI];
+                    output.prediction[0, 0] += input.reality[xI, yI] * kernel[xI, yI];
                 }
             }
-            output.x[0, 0] = Math.Max(0.0, Math.Min(1.0, output.x[0, 0]));
+            output.prediction[0, 0] = Math.Max(0.0, Math.Min(1.0, output.prediction[0, 0]));
         }
 
         /// <summary>
@@ -45,10 +45,10 @@ namespace CDZNET.Core
             {
                 for (int yI = 0; yI < input.Height; yI++)
                 {
-                    input.x[xI, yI] = output.x[0, 0] / kernel[xI, yI];
+                    input.prediction[xI, yI] = output.reality[0, 0] / kernel[xI, yI];
                 }
             }
-            input.x[0, 0] = Math.Max(0.0, Math.Min(1.0, input.x[0, 0]));
+            input.prediction[0, 0] = Math.Max(0.0, Math.Min(1.0, input.prediction[0, 0]));
         }
 
     }

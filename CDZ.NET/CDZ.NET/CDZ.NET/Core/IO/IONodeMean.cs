@@ -4,17 +4,15 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-
 namespace CDZNET.Core
 {
     [Serializable]
     /// <summary>
-    /// An IONode that compute the min (bottomup) or duplicate (topdown)
+    /// An IONode that compute the mean (bottomup) or duplicate (topdown)
     /// </summary>
-    public class IONodeMin:IONode
+    public class IONodeMean:IONode
     {
-        public IONodeMin(Point2D inputDim)
-            : base(inputDim, new Point2D(1, 1))
+        public IONodeMean(Point2D inputDim):base(inputDim, new Point2D(1,1))
         {
         }
 
@@ -23,14 +21,15 @@ namespace CDZNET.Core
         /// </summary>
         protected override void bottomUp()
         {
-            output.x[0, 0] = double.PositiveInfinity;
+            output.prediction[0, 0] = 0.0;
             for (int xI = 0; xI < input.Width; xI++)
             {
                 for (int yI = 0; yI < input.Height; yI++)
                 {
-                    output.x[0, 0] = Math.Min(output.x[0, 0], input.x[xI, yI]);
+                    output.prediction[0, 0] += input.reality[xI, yI];
                 }
             }
+            output.prediction[0, 0] /= (double)(input.Width * input.Height);
         }
 
         /// <summary>
@@ -42,7 +41,7 @@ namespace CDZNET.Core
             {
                 for (int yI = 0; yI < input.Height; yI++)
                 {
-                    input.x[xI, yI] = output.x[0, 0];
+                    input.prediction[xI, yI] = output.reality[0, 0];
                 }
             }
         }

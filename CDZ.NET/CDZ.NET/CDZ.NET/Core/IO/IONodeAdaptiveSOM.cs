@@ -16,8 +16,9 @@ namespace CDZNET.Core
     public class IONodeAdaptiveSOM:IONodeAdaptive
     {
         //Parameters
-        public double learningRadius = 3.0;
-        public double learningRate = 0.1;
+        public double learningRadius;
+        public double learningRate;
+        public double elasticity;
 
         private delegate void Operation2D(int x, int y);
         private delegate void Operation4D(int x1, int y1, int x2, int y2);
@@ -25,8 +26,15 @@ namespace CDZNET.Core
 
         double[,] activity;
         double[, , ,] weights;
+
+        double[,] previousOutput;
+        double[,] recurrentActivity;
+        double[, , ,] recurrentWeights;
+
         Point2D winner;
+        double winnerActivity;
         Point2D looser;
+        double looserActivity;
         bool useWinnerPositionAsOutput;
 
         /// <summary>
@@ -35,28 +43,74 @@ namespace CDZNET.Core
         /// <param name="inputDim">The dimension of the input</param>
         /// <param name="mapSize">The dimension of the map</param>
         /// <param name="useOnlyWinnerAsOutput">Should only the position of the winner be used as an output. False means the whole map activity will be used.</param>
-        public IONodeAdaptiveSOM(Point2D inputDim, Point2D mapSize, bool useOnlyWinnerAsOutput = true)
+        public IONodeAdaptiveSOM(Point2D inputDim, Point2D mapSize, bool useOnlyWinnerAsOutput = true, bool isRecurrent = false)
             :base(inputDim, (useOnlyWinnerAsOutput)?new Point2D(2,1):mapSize)
         {
             activity = new double[(int)mapSize.X, (int)mapSize.Y];
             weights = new double[(int)inputDim.X, (int)inputDim.Y, (int)mapSize.X, (int)mapSize.Y];
+
+            if (isRecurrent)
+            {
+                recurrentActivity = new double[(int)mapSize.X, (int)mapSize.Y];
+                recurrentWeights = new double[output.Width, output.Height, (int)mapSize.X, (int)mapSize.Y];
+                previousOutput = new double[output.Width, output.Height];
+            }
+            else
+            {
+                recurrentWeights = null;
+                previousOutput = null;
+            }
+
             useWinnerPositionAsOutput = useOnlyWinnerAsOutput;
             winner = new Point2D(0,0);
 
+            learningRadius = (1.0 / 4.0) * (activity.GetLength(0) + activity.GetLength(1)) / 2.0;
+            learningRate = 0.1;
+            elasticity = 4.0;
+
             //Assign the weights randomly
-            ForEach(weights, false, (x1,y1,x2,y2) => { weights[x1,y1,x2,y2] = MathHelpers.Rand.NextDouble(); });
+            ForEach(weights, false, (x1, y1, x2, y2) => { weights[x1, y1, x2, y2] = MathHelpers.Rand.NextDouble(); });
+            if (recurrentWeights!=null)
+                ForEach(recurrentWeights, false, (x1, y1, x2, y2) => { recurrentWeights[x1, y1, x2, y2] = MathHelpers.Rand.NextDouble(); });
         }
 
         public override void bottomUpAdaptation(object sender, EventArgs argsNull)
         {
+            //Standard SOM
             double squaredRadius2 = 2 * learningRadius * learningRadius;
+           
+            //DSOM
+            double winnerError = 1.0 - winnerActivity;
+            double inversedSquaredElasticity = -(1 / (elasticity*elasticity));
 
             ForEach(weights,true, (x1, y1, x2, y2) =>
             {
                 double distanceToWinner = MathHelpers.distance(x2, y2, winner.X, winner.Y, Connectivity.torus, activity.GetLength(0), activity.GetLength(1));
                 double factor = Math.Exp(-(double)(distanceToWinner) / squaredRadius2);
-                weights[x1, y1, x2, y2] += learningRate * factor * (input.x[x1, y1] - weights[x1, y1, x2, y2]);
+                bool USE_DSOM = true;
+                if (USE_DSOM)
+                    factor = learningRate * Math.Exp(inversedSquaredElasticity * (distanceToWinner / winnerError));
+                else
+                    factor = learningRate * Math.Exp(-(double)(distanceToWinner) / squaredRadius2);
+
+                weights[x1, y1, x2, y2] += factor * (input.reality[x1, y1] - weights[x1, y1, x2, y2]);
             });
+
+            //if (recurrentWeights != null)
+            //{
+            //    ForEach(recurrentWeights, true, (x1, y1, x2, y2) =>
+            //    {
+            //        double distanceToWinner = MathHelpers.distance(x2, y2, winner.X, winner.Y, Connectivity.torus, activity.GetLength(0), activity.GetLength(1));
+            //        double factor = Math.Exp(-(double)(distanceToWinner) / squaredRadius2);
+            //        bool USE_DSOM = true;
+            //        if (USE_DSOM)
+            //            factor = learningRate * Math.Exp(inversedSquaredElasticity * (distanceToWinner / winnerError));
+            //        else
+            //            factor = learningRate * Math.Exp(-(double)(distanceToWinner) / squaredRadius2);
+
+            //        recurrentWeights[x1, y1, x2, y2] += factor * (previousOutput[x1, y1] - recurrentWeights[x1, y1, x2, y2]);
+            //    });
+            //}
         }
 
         public override void topDownAdaptation(object sender, EventArgs argsNull)
@@ -67,22 +121,51 @@ namespace CDZNET.Core
         protected override void bottomUp()
         {
             //Zero the activity
-            ForEach(activity, true, (i,j) => { activity[i,j] = 0.0; });
+            ForEach(activity, true, (i, j) => { activity[i, j] = 0.0; });
 
             //Compute the activity
             ForEach(weights, false, (x1, y1, x2, y2) =>
                 {
-                    activity[x2, y2] += 1.0 - Math.Abs(weights[x1, y1, x2, y2] - input.x[x1, y1]);
+                    activity[x2, y2] += 1.0 - Math.Abs(weights[x1, y1, x2, y2] - input.reality[x1, y1]);
                 }
                 );
+            
+            if (recurrentWeights != null)
+            {
+                //Copy the past output (for training)
+                if (recurrentWeights != null)
+                {
+                    Array.Copy(output.prediction, previousOutput, previousOutput.Length);
+                }
+
+                ForEach(recurrentActivity, true, (i, j) => { recurrentActivity[i, j] = 0.0; });
+                ForEach(recurrentWeights, false, (x1, y1, x2, y2) =>
+                {
+                    recurrentActivity[x2, y2] += 1.0 - Math.Abs(recurrentWeights[x1, y1, x2, y2] - previousOutput[x1, y1]);
+                }
+                );
+            }
 
             //Scale in [0,1] && find winner
             winner = new Point2D(0, 0);
             looser = new Point2D(0, 0);
             double inputDim = (double)(input.Width * input.Height);
+            
+            double recurrentDim = 1.0;
+            double recurrentContribution = 1.0;
+            if (recurrentWeights != null)
+                recurrentDim = output.Width * output.Height;
+
             ForEach(activity, false, (x, y) => 
-            { 
-                activity[x,y] /= inputDim; 
+            {
+                activity[x, y] /= inputDim;
+
+                if (recurrentWeights != null)
+                {
+                    recurrentActivity[x,y] /= recurrentDim;
+                    activity[x, y] = (activity[x, y] + recurrentContribution * recurrentActivity[x, y]) / (1.0 + recurrentContribution);
+                }
+
                 if (activity[x,y]>activity[(int)winner.X, (int)winner.Y])
                 {
                     winner.X = x;
@@ -97,24 +180,24 @@ namespace CDZNET.Core
             });
 
             //Scale activity in [0,1]
-            double min = activity[(int)looser.X, (int)looser.Y];
-            double max = activity[(int)winner.X, (int)winner.Y];
-            double range = max - min;
+            looserActivity = activity[(int)looser.X, (int)looser.Y];
+            winnerActivity = activity[(int)winner.X, (int)winner.Y];
+            double range = winnerActivity - looserActivity;
 
             ForEach(activity, true, (x, y) =>
             {
-                activity[x, y] = (activity[x, y] - min) / range;
+                activity[x, y] = (activity[x, y] - looserActivity) / range;
             });
 
             //Propagate to output
             if (useWinnerPositionAsOutput)
             {
-                output.x[0,0] = winner.X / (double)activity.GetLength(0);
-                output.x[1,0] = winner.Y / (double)activity.GetLength(1);
+                output.prediction[0,0] = winner.X / (double)activity.GetLength(0);
+                output.prediction[1, 0] = winner.Y / (double)activity.GetLength(1);
             }
             else
             {
-                Array.Copy(activity, output.x, activity.Length);
+                Array.Copy(activity, output.prediction, activity.Length);
             }
         }
 
@@ -123,28 +206,28 @@ namespace CDZNET.Core
             if (useWinnerPositionAsOutput)
             {
                 //Set the winner to 1.0, all the rest to 0.0 (not really required)
-                winner = new Point2D((int)(output.x[0, 0] * activity.GetLength(0)), (int)(output.x[1, 0] * activity.GetLength(1)));
+                winner = new Point2D((int)(output.reality[0, 0] * activity.GetLength(0)), (int)(output.reality[1, 0] * activity.GetLength(1)));
                 ForEach(activity, true, (x, y) =>
                 {
                     activity[x, y] = (x == winner.X && y == winner.Y) ?  1.0 : 0.0;
                 });
 
                 //Directly take the winner RF as the prediction
-                ForEach(input.x, true, (x, y) =>
+                ForEach(input.reality, true, (x, y) =>
                 {
-                    input.x[x, y] = weights[x,y,(int)winner.X,(int)winner.Y];
+                    input.prediction[x, y] = weights[x, y, (int)winner.X, (int)winner.Y];
                 });
             }
             else
             {
                 //Copy the output to activity (not really required)
-                Array.Copy(output.x, activity, activity.Length);
+                Array.Copy(output.reality, activity, activity.Length);
 
                 //Zero the inputs
                 double[,] contribution = new double[input.Width, input.Height];
-                ForEach(input.x,true, (x, y) =>
+                ForEach(input.reality,true, (x, y) =>
                 {
-                    input.x[x, y] = 0.0;
+                    input.prediction[x, y] = 0.0;
                     contribution[x, y] = 0.0;
                 });
 
@@ -154,14 +237,14 @@ namespace CDZNET.Core
                 {
                     if (activity[x2, y2] > 0.95)
                     {
-                        input.x[x1, y1] += weights[x1, y1, x2, y2] * activity[x2, y2];
+                        input.prediction[x1, y1] += weights[x1, y1, x2, y2] * activity[x2, y2];
                         contribution[x1, y1] += activity[x2, y2];
                     }
                 });
 
-                ForEach(input.x,true, (x, y) =>
+                ForEach(input.reality,true, (x, y) =>
                 {
-                    input.x[x, y] /= contribution[x, y];
+                    input.prediction[x, y] /= contribution[x, y];
                 });
             }
         }
