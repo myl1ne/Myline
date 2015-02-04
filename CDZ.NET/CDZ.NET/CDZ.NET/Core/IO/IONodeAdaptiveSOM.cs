@@ -62,7 +62,8 @@ namespace CDZNET.Core
             }
 
             useWinnerPositionAsOutput = useOnlyWinnerAsOutput;
-            winner = new Point2D(0,0);
+            winner = new Point2D(0, 0);
+            looser = new Point2D(0, 0);
 
             learningRadius = (1.0 / 4.0) * (activity.GetLength(0) + activity.GetLength(1)) / 2.0;
             learningRate = 0.1;
@@ -76,6 +77,7 @@ namespace CDZNET.Core
 
         public override void bottomUpAdaptation(object sender, EventArgs argsNull)
         {
+            bool USE_DSOM = true;
             //Standard SOM
             double squaredRadius2 = 2 * learningRadius * learningRadius;
            
@@ -87,7 +89,6 @@ namespace CDZNET.Core
             {
                 double distanceToWinner = MathHelpers.distance(x2, y2, winner.X, winner.Y, Connectivity.torus, activity.GetLength(0), activity.GetLength(1));
                 double factor = Math.Exp(-(double)(distanceToWinner) / squaredRadius2);
-                bool USE_DSOM = true;
                 if (USE_DSOM)
                     factor = learningRate * Math.Exp(inversedSquaredElasticity * (distanceToWinner / winnerError));
                 else

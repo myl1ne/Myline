@@ -13,6 +13,7 @@ namespace CDZNET.GUI
     public partial class CtrlIONode : UserControl
     {
         CDZNET.Core.IONode node;
+
         public CtrlIONode()
         {
             InitializeComponent();

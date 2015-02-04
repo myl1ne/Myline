@@ -9,12 +9,19 @@ namespace CDZNET.Core
     /// <summary>
     /// A multimodal node.
     /// </summary>
-    class MMNode
+    public class MMNode: Node
     {
         public List<Signal> modalities;
         public Dictionary<Signal, double> modalitiesInfluence;
         public Dictionary<string, Signal> modalitiesLabels;
-        public MMNode()
+
+        #region Events
+        public event EventHandler onConvergence;
+        public event EventHandler onDivergence;
+        #endregion
+
+        public MMNode(Point2D outputDim)
+            : base(outputDim)
         {
             modalities = new List<Signal>();
             modalitiesInfluence = new Dictionary<Signal, double>();
@@ -36,13 +43,23 @@ namespace CDZNET.Core
         }
 
         /// <summary>
+        /// Implementation of the convergence operation.
+        /// </summary>
+        protected virtual void converge() { }
+
+        /// <summary>
+        /// Implementation of the divergence operation.
+        /// </summary>
+        protected virtual void diverge() { }
+
+        /// <summary>
         /// Read the real input of all modalities and create an internal representation
         /// </summary>
-        protected virtual void Converge() { }
+        public void Converge() { converge(); if (onConvergence != null) onConvergence(this, null); }
 
         /// <summary>
         /// Read the current internal representation and predict every modality from it
         /// </summary>
-        protected virtual void Diverge() { }
+        public void Diverge() { diverge(); if (onDivergence != null) onDivergence(this, null); }
     }
 }

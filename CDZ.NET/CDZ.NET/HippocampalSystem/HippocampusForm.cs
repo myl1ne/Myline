@@ -20,18 +20,20 @@ namespace HippocampalSystem
     public partial class HippocampusForm : Form
     {
         //Environment, in this case an image
-        Bitmap imageToExplore = new Bitmap();
+        Bitmap imageToExplore;
 
         //MEC
         List<IONode> mec;
 
         //LEC
         List<IONode> lec;
-        int foveaSize = 10;
+        int foveaSize = 20;
 
         //CA3-1
-        IONodeAdaptive CA3;
-        IONodeAdaptive CA1;
+        //IONodeAdaptive DG;
+        List<SignalLink> CA3Inputs;
+        MMNode CA3;
+        MMNode CA1;
 
         //Module related
         Thread networkThread;
@@ -39,8 +41,8 @@ namespace HippocampalSystem
         public HippocampusForm()
         {
             InitializeComponent();
-
-            //MEC
+            //--------------------------------------------------------------------------
+            //-------------MEC
             mec = new List<IONode>();
             int mecAreas = 1;
             for (int i = 1; i <= mecAreas; i++)
@@ -57,29 +59,57 @@ namespace HippocampalSystem
                 flowLayoutPanelMEC.Controls.Add(mec.Last().GetCtrl());
             }
 
-            //LEC
+            //--------------------------------------------------------------------------
+            //--------------LEC
             lec = new List<IONode>();
             int lecAreas = 1;
             for (int i = 1; i <= lecAreas; i++)
             {
-                mec.Add(
+                lec.Add(
                     new IONodeAdaptiveSOM
                         (
-                            new Point2D(10, 10),    //Input, size of the fovea
-                            new Point2D(50, 50),    //Size of the map. Defines the number of templates/filter used.
-                            true)                    //USe only winner as output
+                            new Point2D(foveaSize, foveaSize),    //Input, size of the fovea
+                            new Point2D(20, 20),    //Size of the map. Defines the number of templates/filter used.
+                            false)                    //USe only winner as output
                         );
 
                 flowLayoutPanelLEC.Controls.Add(lec.Last().GetCtrl());
             }
 
+
+            //--------------------------------------------------------------------------
+            //--------------CA3           
+            CA3Inputs = new List<SignalLink>();
+            CA3 = new MMNodeSOM
+                (
+                    new Point2D(20, 20),    //Size of the map.
+                    false                    //Use only the winner for prediction
+                );
+
+            //Add all the MEC modalities
+            int counter = 0;
+            foreach (IONode n in mec)
+            {
+                SignalLink link = new SignalLink(n.output, new Signal(n.output));
+                CA3.addModality(link.to, "MEC_" + counter++); //note: n.output is cloned, not a reference             
+                CA3Inputs.Add(link);
+            }
+
+            //Add the LEC modalities
+            counter = 0;
+            foreach (IONode n in lec)
+            {
+                SignalLink link = new SignalLink(n.output, new Signal(n.output));
+                CA3.addModality(link.to, "LEC_" + counter++); //note: n.output is cloned, not a reference             
+                CA3Inputs.Add(link);
+            }
+            ctrlMMNode1.attach(CA3);
         }
 
         void networkLoop()
         {
-
             Point2D position = new Point2D(0.0f, 0.0f);
-            Bitmap fovea = new Bitmap(10, 10);
+            Bitmap fovea = new Bitmap(foveaSize, foveaSize);
             double dX = 0.0;
             double dY = 0.0;
 
@@ -95,10 +125,7 @@ namespace HippocampalSystem
                 position.Y += (float)dY * imageToExplore.Height;
                 MathHelpers.Clamp(ref position.X, 0.0f, imageToExplore.Width - foveaSize);
                 MathHelpers.Clamp(ref position.Y, 0.0f, imageToExplore.Height - foveaSize);
-
-                //Update the sensory input : vision
-                fovea = imageToExplore.Clone(new Rectangle(new Point((int)position.X, (int)position.Y), new Size(foveaSize, foveaSize)), imageToExplore.PixelFormat);
-
+                
                 //Compute the MEC activity
                 double[,] mecInput = new double[,] { { position.X }, { position.Y } };
                 Parallel.ForEach(mec, mecItem =>
@@ -107,7 +134,25 @@ namespace HippocampalSystem
                     mecItem.BottomUp();
                 });
 
+                //Compute the LEC activity
+                Rectangle foveaRect = new Rectangle(new Point((int)position.X, (int)position.Y), new Size(foveaSize, foveaSize));
+                fovea = imageToExplore.Clone(foveaRect, imageToExplore.PixelFormat);
+                drawFoveaBorders(foveaRect);
 
+                Parallel.ForEach(lec, lecItem =>
+                {
+                    lecItem.input.fromBitmap(fovea,true);
+                    lecItem.BottomUp();
+                });
+
+                //Propagate the activity to CA3
+                foreach(SignalLink link in CA3Inputs)
+                {
+                    link.FeedForward();
+                }
+
+                //Compute CA3 activity
+                CA3.Cycle();
 
                 count++;
             }
@@ -148,12 +193,33 @@ namespace HippocampalSystem
             //f.Close();
         }
 
+        private delegate void rectangleFunction(Rectangle rect);
+        private void drawFoveaBorders(Rectangle foveaRect)
+        {
+            if (pictureBoxStimulus.InvokeRequired)
+            {
+                this.Invoke(new rectangleFunction(drawFoveaBorders), foveaRect);
+            }
+            else
+            {
+                pictureBoxStimulus.Image = new Bitmap(imageToExplore);
+                using (Graphics g = Graphics.FromImage(pictureBoxStimulus.Image))
+                {
+                    g.FillRectangle(new SolidBrush(Color.Red), foveaRect);
+                }
+                pictureBoxStimulus.Refresh();
+            }
+        }
+
         private void openToolStripMenuItem_Click(object sender, EventArgs e)
         {
             if( openFileDialog1.ShowDialog() == System.Windows.Forms.DialogResult.OK)
             {
                 //Load the file
                 imageToExplore = new Bitmap(openFileDialog1.FileName);
+
+                pictureBoxStimulus.Image = new Bitmap(imageToExplore);
+                pictureBoxStimulus.Refresh();
 
                 //Run the clock
                 networkThread = new Thread(networkLoop);

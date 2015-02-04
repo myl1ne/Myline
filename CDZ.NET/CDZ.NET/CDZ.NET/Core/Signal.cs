@@ -20,6 +20,10 @@ namespace CDZNET.Core
             reality = new double[w, h];
             prediction = new double[w, h];
         }
-
+        public Signal(Signal s)
+        {
+            reality = new double[s.Width, s.Height];
+            prediction = new double[s.Width, s.Height];
+        }
     }
 }

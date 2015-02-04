@@ -10,18 +10,16 @@ namespace CDZNET.Core
     /// <summary>
     /// The base class to handle all bidirectional IO transformations
     /// </summary>
-    public class IONode
+    public class IONode: Node
     {
         public Signal input;
-        public Signal output;
         public event EventHandler onBottomUp;
         public event EventHandler onTopDown;
         public event EventHandler onResized;
 
-        public IONode(Point2D inputDim, Point2D outputDim)
+        public IONode(Point2D inputDim, Point2D outputDim):base(outputDim)
         {
             input = new Signal((int)inputDim.X, (int)inputDim.Y);
-            output = new Signal((int)outputDim.X, (int)outputDim.Y);
         }
 
         /// <summary>

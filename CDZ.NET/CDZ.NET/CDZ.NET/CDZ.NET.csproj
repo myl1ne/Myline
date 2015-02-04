@@ -41,6 +41,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Core\Node.cs" />
     <Compile Include="Core\IO\IONode.cs" />
     <Compile Include="Core\IO\IONodeAdaptive.cs" />
     <Compile Include="Core\IO\IONodeAdaptiveSOM.cs" />
@@ -53,9 +54,12 @@
     <Compile Include="Core\IO\IONodeMin.cs" />
     <Compile Include="Core\IO\IONodeGridCells.cs" />
     <Compile Include="Core\MM\MMNode.cs" />
+    <Compile Include="Core\MM\MMNodeSOM.cs" />
     <Compile Include="Core\Signal.cs" />
+    <Compile Include="Core\SignalLink.cs" />
     <Compile Include="Core\Templates\IONodeAdaptiveTemplate.cs" />
     <Compile Include="Core\Templates\IONodeTemplate.cs" />
+    <Compile Include="Core\Templates\MMNodeTemplate.cs" />
     <Compile Include="Helpers\MathHelpers.cs" />
     <Compile Include="Helpers\ObjectCopier.cs" />
     <Compile Include="Helpers\Point3D.cs" />

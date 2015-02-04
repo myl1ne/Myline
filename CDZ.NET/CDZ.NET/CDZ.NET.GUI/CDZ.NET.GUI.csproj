@@ -43,18 +43,36 @@
   <ItemGroup>
     <Compile Include="Helpers\ColorInterpolator.cs" />
     <Compile Include="Helpers\GeneralExtensions.cs" />
+    <Compile Include="IONodeControls\CtrlIMMNode.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="IONodeControls\CtrlIMMNode.Designer.cs">
+      <DependentUpon>CtrlIMMNode.cs</DependentUpon>
+    </Compile>
     <Compile Include="IONodeControls\CtrlIONode.cs">
       <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="IONodeControls\CtrlIONode.Designer.cs">
       <DependentUpon>CtrlIONode.cs</DependentUpon>
     </Compile>
+    <Compile Include="IONodeControls\CtrlSignal.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="IONodeControls\CtrlSignal.Designer.cs">
+      <DependentUpon>CtrlSignal.cs</DependentUpon>
+    </Compile>
     <Compile Include="IONodeControls\IONodeExtensions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="IONodeControls\CtrlIMMNode.resx">
+      <DependentUpon>CtrlIMMNode.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="IONodeControls\CtrlIONode.resx">
       <DependentUpon>CtrlIONode.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="IONodeControls\CtrlSignal.resx">
+      <DependentUpon>CtrlSignal.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
