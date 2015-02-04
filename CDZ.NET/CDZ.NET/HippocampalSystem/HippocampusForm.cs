@@ -143,6 +143,7 @@ namespace HippocampalSystem
                 {
                     lecItem.input.fromBitmap(fovea,true);
                     lecItem.BottomUp();
+                    Array.Copy(lecItem.output.prediction, lecItem.output.reality, lecItem.output.prediction.Length);
                 });
 
                 //Propagate the activity to CA3
@@ -153,6 +154,18 @@ namespace HippocampalSystem
 
                 //Compute CA3 activity
                 CA3.Cycle();
+                
+                //Backpropagate the activity from CA3
+                foreach (SignalLink link in CA3Inputs)
+                {
+                    link.FeedBack();
+                }
+
+                //Recompute LEC signals
+                Parallel.ForEach(lec, lecItem =>
+                {
+                    lecItem.TopDown();
+                });
 
                 count++;
             }
