@@ -18,10 +18,12 @@ namespace CDZNET.GUI
             InitializeComponent();
         }
 
-        public void attach(CDZNET.Core.Signal s)
+        public void attach(CDZNET.Core.Signal s, string signalLabel = null)
         {
             signal = s;
             label3.Text = "Dimensions: " + s.Width + "x" + s.Height;
+            if (signalLabel != null)
+                labelLabel.Text = signalLabel;
         }
 
         public void UpdatePrediction()

@@ -25,7 +25,7 @@ namespace CDZNET.GUI
             foreach(CDZNET.Core.Signal s in node.modalities)
             {
                 CtrlSignal ctrl = new CtrlSignal();
-                ctrl.attach(s);
+                ctrl.attach(s, node.labelsModalities[s]);
                 flowLayoutPanel1.Controls.Add(ctrl);
             }
             node.onConvergence += node_onConvergence;

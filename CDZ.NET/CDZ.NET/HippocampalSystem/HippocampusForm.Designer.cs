@@ -39,11 +39,14 @@
             this.fileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.openToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.pictureBoxStimulus = new System.Windows.Forms.PictureBox();
+            this.ctrlMMNode2 = new CDZNET.GUI.CtrlMMNode();
             this.ctrlMMNode1 = new CDZNET.GUI.CtrlMMNode();
+            this.pictureBoxReconstruct = new System.Windows.Forms.PictureBox();
             this.flowLayoutPanelMEC.SuspendLayout();
             this.flowLayoutPanelLEC.SuspendLayout();
             this.menuStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBoxStimulus)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBoxReconstruct)).BeginInit();
             this.SuspendLayout();
             // 
             // label1
@@ -145,6 +148,14 @@
             this.pictureBoxStimulus.TabIndex = 7;
             this.pictureBoxStimulus.TabStop = false;
             // 
+            // ctrlMMNode2
+            // 
+            this.ctrlMMNode2.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.ctrlMMNode2.Location = new System.Drawing.Point(16, 819);
+            this.ctrlMMNode2.Name = "ctrlMMNode2";
+            this.ctrlMMNode2.Size = new System.Drawing.Size(917, 223);
+            this.ctrlMMNode2.TabIndex = 8;
+            // 
             // ctrlMMNode1
             // 
             this.ctrlMMNode1.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
@@ -153,11 +164,23 @@
             this.ctrlMMNode1.Size = new System.Drawing.Size(917, 223);
             this.ctrlMMNode1.TabIndex = 6;
             // 
+            // pictureBoxReconstruct
+            // 
+            this.pictureBoxReconstruct.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.pictureBoxReconstruct.Location = new System.Drawing.Point(939, 592);
+            this.pictureBoxReconstruct.Name = "pictureBoxReconstruct";
+            this.pictureBoxReconstruct.Size = new System.Drawing.Size(451, 451);
+            this.pictureBoxReconstruct.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
+            this.pictureBoxReconstruct.TabIndex = 9;
+            this.pictureBoxReconstruct.TabStop = false;
+            // 
             // HippocampusForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1616, 818);
+            this.ClientSize = new System.Drawing.Size(1616, 1055);
+            this.Controls.Add(this.pictureBoxReconstruct);
+            this.Controls.Add(this.ctrlMMNode2);
             this.Controls.Add(this.pictureBoxStimulus);
             this.Controls.Add(this.ctrlMMNode1);
             this.Controls.Add(this.label2);
@@ -175,6 +198,7 @@
             this.menuStrip1.ResumeLayout(false);
             this.menuStrip1.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBoxStimulus)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBoxReconstruct)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -194,5 +218,7 @@
         private System.Windows.Forms.ToolStripMenuItem openToolStripMenuItem;
         private CDZNET.GUI.CtrlMMNode ctrlMMNode1;
         private System.Windows.Forms.PictureBox pictureBoxStimulus;
+        private CDZNET.GUI.CtrlMMNode ctrlMMNode2;
+        private System.Windows.Forms.PictureBox pictureBoxReconstruct;
     }
 }

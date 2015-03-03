@@ -38,9 +38,9 @@
             // pictureBoxMapActivity
             // 
             this.pictureBoxMapActivity.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.pictureBoxMapActivity.Location = new System.Drawing.Point(719, 4);
+            this.pictureBoxMapActivity.Location = new System.Drawing.Point(3, 3);
             this.pictureBoxMapActivity.Name = "pictureBoxMapActivity";
-            this.pictureBoxMapActivity.Size = new System.Drawing.Size(183, 197);
+            this.pictureBoxMapActivity.Size = new System.Drawing.Size(183, 213);
             this.pictureBoxMapActivity.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
             this.pictureBoxMapActivity.TabIndex = 0;
             this.pictureBoxMapActivity.TabStop = false;
@@ -48,17 +48,18 @@
             // flowLayoutPanel1
             // 
             this.flowLayoutPanel1.AutoScroll = true;
+            this.flowLayoutPanel1.AutoSize = true;
             this.flowLayoutPanel1.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.flowLayoutPanel1.Location = new System.Drawing.Point(3, 4);
+            this.flowLayoutPanel1.Location = new System.Drawing.Point(192, 3);
             this.flowLayoutPanel1.Name = "flowLayoutPanel1";
-            this.flowLayoutPanel1.Size = new System.Drawing.Size(710, 197);
+            this.flowLayoutPanel1.Size = new System.Drawing.Size(710, 213);
             this.flowLayoutPanel1.TabIndex = 1;
             this.flowLayoutPanel1.WrapContents = false;
             // 
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(354, 204);
+            this.label1.Location = new System.Drawing.Point(532, 219);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(36, 13);
             this.label1.TabIndex = 2;
@@ -67,7 +68,7 @@
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(799, 204);
+            this.label2.Location = new System.Drawing.Point(78, 219);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(39, 13);
             this.label2.TabIndex = 3;
@@ -77,13 +78,14 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.AutoSize = true;
             this.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.Controls.Add(this.label2);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.flowLayoutPanel1);
             this.Controls.Add(this.pictureBoxMapActivity);
             this.Name = "CtrlMMNode";
-            this.Size = new System.Drawing.Size(905, 223);
+            this.Size = new System.Drawing.Size(905, 244);
             ((System.ComponentModel.ISupportInitialize)(this.pictureBoxMapActivity)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();

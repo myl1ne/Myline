@@ -94,5 +94,10 @@ namespace CDZNET
         {
             value = (float)Math.Max(min, Math.Min(max, value));
         }
+
+        public static void Clamp(ref double value, double min, double max)
+        {
+            value = Math.Max(min, Math.Min(max, value));
+        }
     }
 }

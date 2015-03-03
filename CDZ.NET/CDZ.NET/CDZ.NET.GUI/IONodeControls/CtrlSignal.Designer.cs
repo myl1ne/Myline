@@ -33,6 +33,7 @@
             this.label1 = new System.Windows.Forms.Label();
             this.label2 = new System.Windows.Forms.Label();
             this.label3 = new System.Windows.Forms.Label();
+            this.labelLabel = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBoxReal)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBoxPrediction)).BeginInit();
             this.SuspendLayout();
@@ -82,10 +83,21 @@
             this.label3.TabIndex = 4;
             this.label3.Text = "Dimensions";
             // 
+            // labelLabel
+            // 
+            this.labelLabel.AutoSize = true;
+            this.labelLabel.Location = new System.Drawing.Point(136, 150);
+            this.labelLabel.Name = "labelLabel";
+            this.labelLabel.Size = new System.Drawing.Size(16, 13);
+            this.labelLabel.TabIndex = 5;
+            this.labelLabel.Text = "---";
+            this.labelLabel.TextAlign = System.Drawing.ContentAlignment.TopCenter;
+            // 
             // CtrlSignal
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.Controls.Add(this.labelLabel);
             this.Controls.Add(this.label3);
             this.Controls.Add(this.label2);
             this.Controls.Add(this.label1);
@@ -107,5 +119,6 @@
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.Label label3;
+        private System.Windows.Forms.Label labelLabel;
     }
 }

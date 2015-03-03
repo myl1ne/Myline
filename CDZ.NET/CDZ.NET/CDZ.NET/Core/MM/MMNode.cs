@@ -14,6 +14,7 @@ namespace CDZNET.Core
         public List<Signal> modalities;
         public Dictionary<Signal, double> modalitiesInfluence;
         public Dictionary<string, Signal> modalitiesLabels;
+        public Dictionary<Signal, string> labelsModalities;
 
         #region Events
         public event EventHandler onConvergence;
@@ -26,12 +27,15 @@ namespace CDZNET.Core
             modalities = new List<Signal>();
             modalitiesInfluence = new Dictionary<Signal, double>();
             modalitiesLabels = new Dictionary<string, Signal>();
+            labelsModalities = new Dictionary<Signal, string>();
         }
 
         public virtual void addModality(Signal s, string label = null)
         {
             modalities.Add(s);
             modalitiesInfluence[s] = 1.0f;
+            labelsModalities[s] = label;
+
             if (label != null)
                 modalitiesLabels[label] = s;
         }

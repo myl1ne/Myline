@@ -28,6 +28,7 @@ namespace HippocampalSystem
         //LEC
         List<IONode> lec;
         int foveaSize = 20;
+        Size imageSize = new Size(320, 240);
 
         //CA3-1
         //IONodeAdaptive DG;
@@ -70,7 +71,7 @@ namespace HippocampalSystem
                         (
                             new Point2D(foveaSize, foveaSize),    //Input, size of the fovea
                             new Point2D(20, 20),    //Size of the map. Defines the number of templates/filter used.
-                            false)                    //USe only winner as output
+                            true)                    //USe only winner as output
                         );
 
                 flowLayoutPanelLEC.Controls.Add(lec.Last().GetCtrl());
@@ -83,7 +84,7 @@ namespace HippocampalSystem
             CA3 = new MMNodeSOM
                 (
                     new Point2D(20, 20),    //Size of the map.
-                    false                    //Use only the winner for prediction
+                    true                    //Use only the winner for prediction
                 );
 
             //Add all the MEC modalities
@@ -104,6 +105,17 @@ namespace HippocampalSystem
                 CA3Inputs.Add(link);
             }
             ctrlMMNode1.attach(CA3);
+
+            //--------------------------------------------------------------------------
+            //--------------CA1           
+            CA1 = new MMNodeLookupTable
+                (
+                    new Point2D(1, 1)    //Size of the map.
+                );
+
+            CA1.addModality(new Signal(foveaSize,foveaSize), "FOVEA");
+            CA1.addModality(new Signal(2, 1), "ODOMETRY");
+            ctrlMMNode2.attach(CA1);   
         }
 
         void networkLoop()
@@ -117,17 +129,19 @@ namespace HippocampalSystem
             while (networkThread.IsAlive)
             {
                 //Choose the next action (move along x/y)
-                dX = (MathHelpers.Rand.NextDouble() * 2.0 - 1.0);
-                dY = (MathHelpers.Rand.NextDouble() * 2.0 - 1.0);
+                //dX = (MathHelpers.Rand.NextDouble() * 2.0 - 1.0);
+                //dY = (MathHelpers.Rand.NextDouble() * 2.0 - 1.0);
 
                 //Update the sensory input : position
-                position.X += (float)dX * imageToExplore.Width;
-                position.Y += (float)dY * imageToExplore.Height;
-                MathHelpers.Clamp(ref position.X, 0.0f, imageToExplore.Width - foveaSize);
-                MathHelpers.Clamp(ref position.Y, 0.0f, imageToExplore.Height - foveaSize);
+                //position.X += (float)dX * imageToExplore.Width;
+                //position.Y += (float)dY * imageToExplore.Height;
+                //MathHelpers.Clamp(ref position.X, 0.0f, imageToExplore.Width - foveaSize);
+                //MathHelpers.Clamp(ref position.Y, 0.0f, imageToExplore.Height - foveaSize);
+                position.X = MathHelpers.Rand.Next(0, imageToExplore.Width - foveaSize);
+                position.Y = MathHelpers.Rand.Next(0, imageToExplore.Height - foveaSize);
                 
                 //Compute the MEC activity
-                double[,] mecInput = new double[,] { { position.X }, { position.Y } };
+                double[,] mecInput = new double[,] { { position.X / (double)imageToExplore.Width }, { position.Y / (double)imageToExplore.Height } };
                 Parallel.ForEach(mec, mecItem =>
                 {
                     mecItem.input.reality = mecInput;
@@ -166,6 +180,12 @@ namespace HippocampalSystem
                 {
                     lecItem.TopDown();
                 });
+
+                //TMP
+                CA1.modalities[0].fromBitmap(fovea, true);
+                CA1.modalities[1].reality = mecInput;
+                CA1.Cycle();
+                drawPredictedFovea(foveaRect);
 
                 count++;
             }
@@ -223,6 +243,21 @@ namespace HippocampalSystem
                 pictureBoxStimulus.Refresh();
             }
         }
+        private void drawPredictedFovea(Rectangle foveaRect)
+        {
+            if (pictureBoxReconstruct.InvokeRequired)
+            {
+                this.Invoke(new rectangleFunction(drawPredictedFovea), foveaRect);
+            }
+            else
+            {
+                using (Graphics g = Graphics.FromImage(pictureBoxReconstruct.Image))
+                {
+                    g.DrawImage(CA1.modalitiesLabels["FOVEA"].toBitmap(false, Color.Black, Color.White), foveaRect);
+                }
+                pictureBoxReconstruct.Refresh();
+            }
+        }
 
         private void openToolStripMenuItem_Click(object sender, EventArgs e)
         {
@@ -230,9 +265,11 @@ namespace HippocampalSystem
             {
                 //Load the file
                 imageToExplore = new Bitmap(openFileDialog1.FileName);
-
+                imageToExplore = new Bitmap(imageToExplore, imageSize);
                 pictureBoxStimulus.Image = new Bitmap(imageToExplore);
                 pictureBoxStimulus.Refresh();
+
+                pictureBoxReconstruct.Image = new Bitmap(imageSize.Width, imageSize.Height);
 
                 //Run the clock
                 networkThread = new Thread(networkLoop);

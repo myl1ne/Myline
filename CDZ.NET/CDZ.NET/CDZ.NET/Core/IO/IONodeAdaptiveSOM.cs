@@ -203,7 +203,8 @@ namespace CDZNET.Core
         }
 
         protected override void topDown()
-        {
+        {   
+            //Make the prediction
             if (useWinnerPositionAsOutput)
             {
                 //Set the winner to 1.0, all the rest to 0.0 (not really required)
@@ -221,8 +222,37 @@ namespace CDZNET.Core
             }
             else
             {
-                //Copy the output to activity (not really required)
+                //Copy the output real to activity
                 Array.Copy(output.reality, activity, activity.Length);
+
+                //Scale in [0,1] && find winner
+                winner = new Point2D(0, 0);
+                looser = new Point2D(0, 0);
+
+                ForEach(activity, false, (x, y) =>
+                {
+                    if (activity[x, y] > activity[(int)winner.X, (int)winner.Y])
+                    {
+                        winner.X = x;
+                        winner.Y = y;
+                    }
+
+                    if (activity[x, y] < activity[(int)looser.X, (int)looser.Y])
+                    {
+                        looser.X = x;
+                        looser.Y = y;
+                    }
+                });
+
+                //Scale activity in [0,1]
+                looserActivity = activity[(int)looser.X, (int)looser.Y];
+                winnerActivity = activity[(int)winner.X, (int)winner.Y];
+                double range = winnerActivity - looserActivity;
+
+                ForEach(activity, true, (x, y) =>
+                {
+                    activity[x, y] = (activity[x, y] - looserActivity) / range;
+                });
 
                 //Zero the inputs
                 double[,] contribution = new double[input.Width, input.Height];
