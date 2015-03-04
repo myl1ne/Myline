@@ -9,6 +9,9 @@ using System.Threading.Tasks;
 using System.Threading;
 using System.Windows.Forms;
 
+using CDZNET;
+using CDZNET.Core;
+
 namespace VowelWorldModel
 {
     public partial class MainWindow : Form
@@ -101,12 +104,20 @@ namespace VowelWorldModel
                 //Run a cycle on CA3
                 CA3.Converge();
                 CA3.Diverge();
+
+                //-----------------
+                //Monitor the errors
+                
+                //1-Predict XY based on vision
+                Dictionary<Signal, double[,]> errorVisionBased = CA3.Evaluate(new List<CDZNET.Core.Signal>() { LEC_Color, LEC_Orientation, LEC_Shape });
+                Dictionary<Signal, double[,]> errorXYBased = CA3.Evaluate(new List<CDZNET.Core.Signal>() { LEC_Color, LEC_Orientation, LEC_Shape });
             }
         }
 
 
 
         //---------------------VISUALIZATION------------------
+        #region Visualuzation
         void getWorldVisualization()
         {
             worldVisu = new Bitmap(world.Width, world.Height);
@@ -142,5 +153,6 @@ namespace VowelWorldModel
                 pictureBoxWorld.Refresh();
             }
         }
+        #endregion
     }
 }

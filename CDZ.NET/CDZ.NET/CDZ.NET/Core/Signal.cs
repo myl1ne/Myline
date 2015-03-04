@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using CDZNET.Helpers;
 
 namespace CDZNET.Core
 {
@@ -24,6 +25,17 @@ namespace CDZNET.Core
         {
             reality = new double[s.Width, s.Height];
             prediction = new double[s.Width, s.Height];
+        }
+
+        /// <summary>
+        /// Compute the difference between reality and prediction using a parralel loop
+        /// </summary>
+        /// <returns>The error signal</returns>
+        public double[,] ComputeError()
+        {
+            double[,] error = reality.Clone() as double[,];
+            ArrayHelper.ForEach(reality, true, (x, y) => { error[x, y] -= prediction[x, y];});
+            return error;
         }
     }
 }
