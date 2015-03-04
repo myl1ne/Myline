@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Threading;
 using System.Windows.Forms;
+using System.IO;
 
 using CDZNET;
 using CDZNET.Core;
@@ -17,7 +18,7 @@ namespace VowelWorldModel
     public partial class MainWindow : Form
     {
         //Parameters
-        int retinaSize = 5;
+        int retinaSize = 3;
         int shapeCount = 4;
         int worldWidth = 100;
         int worldHeight = 100;
@@ -34,7 +35,7 @@ namespace VowelWorldModel
         CDZNET.Core.Signal MEC;//Proprioception/Grid Cells
 
         //2-Areas
-        CDZNET.Core.MMNode CA3; //Here you specify which algo to be used
+        CDZNET.Core.MMNode CA3;
 
         //Thread
         public Thread mainLoopThread; 
@@ -56,11 +57,16 @@ namespace VowelWorldModel
             MEC = new CDZNET.Core.Signal(2, 1); //Proprioception/Grid Cells
 
             //2-Areas
-            CA3 = new CDZNET.Core.MMNodeSOM(new CDZNET.Point2D(20, 20), false); //Here you specify which algo to be used
+            CA3 = new CDZNET.Core.MMNodeSOM(new CDZNET.Point2D(50, 50), false); //Here you specify which algo to be used
+            //CA3 = new CDZNET.Core.MMNodeLookupTable(new Point2D(1, 1)); //Here you specify which algo to be used
+            (CA3 as MMNodeSOM).learningRate = 0.01;
+            (CA3 as MMNodeSOM).elasticity = 2.0;
+
+            //Define which signal will enter CA3
             CA3.addModality(LEC_Color, "Color");
             CA3.addModality(LEC_Orientation, "Orientation");
-            CA3.addModality(LEC_Shape, "Shape");
-            CA3.addModality(MEC, "XY");
+            //CA3.addModality(LEC_Shape, "Shape");
+            //CA3.addModality(MEC, "XY");
 
             //Gui purpose
             ctrlCA3.attach(CA3);
@@ -73,9 +79,13 @@ namespace VowelWorldModel
         {
             //Explore the world
             Random rnd = new Random();
+            StreamWriter logFile = new StreamWriter("errorLog.csv");
+            logFile.WriteLine("t,realColor,realOrientation,color->orientation,orientation->color,Eorientation,Ecolor");
+
             //int explorationSteps = 1000;
             //for (int step = 0; step < explorationSteps; step++)
-            while (mainLoopThread.IsAlive)
+            int steps = 0;
+            while (steps<5000 && mainLoopThread.IsAlive)
             {
                 //-----------------
                 //Saccade somewhere
@@ -106,12 +116,25 @@ namespace VowelWorldModel
                 CA3.Diverge();
 
                 //-----------------
-                //Monitor the errors
-                
-                //1-Predict XY based on vision
-                Dictionary<Signal, double[,]> errorVisionBased = CA3.Evaluate(new List<CDZNET.Core.Signal>() { LEC_Color, LEC_Orientation, LEC_Shape });
-                Dictionary<Signal, double[,]> errorXYBased = CA3.Evaluate(new List<CDZNET.Core.Signal>() { LEC_Color, LEC_Orientation, LEC_Shape });
+                //Monitor the errors             
+                //1-
+                Dictionary<Signal, double[,]> orientationFromColor = CA3.Evaluate(new List<CDZNET.Core.Signal>() { LEC_Color} );
+                double predictedOrientation = LEC_Orientation.prediction[0,0];
+                Dictionary<Signal, double[,]> colorFromOrientation = CA3.Evaluate(new List<CDZNET.Core.Signal>() { LEC_Orientation } );
+                double predictedColor = LEC_Color.prediction[0, 0];
+
+                logFile.WriteLine(steps + "," + 
+                    LEC_Color.reality[0,0]+ "," + 
+                    LEC_Orientation.reality[0,0]+ "," +
+                    predictedOrientation + "," +
+                    predictedColor   + "," +    
+                    Math.Pow(predictedColor-LEC_Color.reality[0,0],2.0)   + "," +   
+                    Math.Pow(predictedOrientation-LEC_Orientation.reality[0,0],2.0)             
+                    );
+                logFile.Flush();
+                steps++;
             }
+            logFile.Close();
         }
 
 
