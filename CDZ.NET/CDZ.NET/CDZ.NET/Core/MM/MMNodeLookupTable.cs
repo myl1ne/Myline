@@ -13,9 +13,9 @@ namespace CDZNET.Core
     /// </summary>
     public class MMNodeLookupTable : MMNode
     {
-        double TRESHOLD_SIMILARITY = 0.01;
-        double learningRate = 0.01;
-
+        public double TRESHOLD_SIMILARITY = 0.01;
+        public double learningRate = 0.01;
+        public bool allowTemplateCreation = true;
         public class Template
         {
             public Signal modality;
@@ -147,7 +147,7 @@ namespace CDZNET.Core
             foreach(Signal s in modalities)
             {
                 //First check if we have a good enough template
-                if (bestTemplates[s].Key == null || bestTemplates[s].Value > TRESHOLD_SIMILARITY)
+                if (bestTemplates[s].Key == null || (bestTemplates[s].Value > TRESHOLD_SIMILARITY && allowTemplateCreation))
                 {
                     //We never encountered this specific modality pattern before.
                     //Create it with empty associations
@@ -232,12 +232,14 @@ namespace CDZNET.Core
                         ArrayHelper.ForEach(sTarget.prediction, false, (x, y) =>
                         {
                             int encounters = predictions[sTarget][sSource].mostLikely.Value;
-                            sTarget.prediction[x, y] += encounters * predictions[sTarget][sSource].mostLikely.Key.template[x, y];
-                            contributions[x, y] += encounters;
+                            double trustFactor = encounters * modalitiesInfluence[sSource];
+                            sTarget.prediction[x, y] += trustFactor * predictions[sTarget][sSource].mostLikely.Key.template[x, y];
+                            contributions[x, y] += trustFactor;
 
                             encounters = predictions[sTarget][sSource].mostClose.Value;
-                            sTarget.prediction[x, y] += encounters * predictions[sTarget][sSource].mostClose.Key.template[x, y];
-                            contributions[x, y] += encounters;                 
+                            trustFactor = encounters * modalitiesInfluence[sSource];
+                            sTarget.prediction[x, y] += trustFactor * predictions[sTarget][sSource].mostClose.Key.template[x, y];
+                            contributions[x, y] += trustFactor;                 
                         });
                     }
                 }
