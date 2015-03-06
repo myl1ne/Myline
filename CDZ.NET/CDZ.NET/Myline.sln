@@ -19,7 +19,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TimeCells", "TimeCells\Time
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Visual-HippocampalSystem", "HippocampalSystem\Visual-HippocampalSystem.csproj", "{9F67387D-1FA7-4CA9-9594-EB75E9345858}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "H5W", "H5W", "{133A4AE7-4724-494C-A422-7B1E389935E0}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "H5W Draft", "H5W Draft", "{133A4AE7-4724-494C-A422-7B1E389935E0}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KnowledgePropagation", "KnowledgePropagation\KnowledgePropagation.csproj", "{8647D2E4-47FC-4943-9FE2-AAF4469F40CF}"
 EndProject

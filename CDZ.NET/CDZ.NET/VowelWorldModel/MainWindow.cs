@@ -18,14 +18,20 @@ namespace VowelWorldModel
     public partial class MainWindow : Form
     {
         //Parameters
-        int retinaSize = 3;
+        int retinaSize = 1;
         int shapeCount = 4;
         int worldWidth = 100;
         int worldHeight = 100;
         int seedsNumber = 5;
-        double orientationVariability = 10.0; //degrees
+        double orientationVariability = 0.0; //degrees
         World world;
         Bitmap worldVisu;
+
+        //Color codes
+        readonly double[] CODE_RED = { 0.0, 0.0, 0.0, 1.0 };
+        readonly double[] CODE_BLUE = { 0.0, 0.0, 1.0, 0.0 };
+        readonly double[] CODE_GREEN = { 0.0, 1.0, 0.0, 0.0 };
+        readonly double[] CODE_YELLOW = { 1.0, 0.0, 0.0, 0.0 };
 
         //Network structures
         //1-Inputs
@@ -51,16 +57,19 @@ namespace VowelWorldModel
 
             //Generate the network
             //1-Inputs
-            LEC_Color = new CDZNET.Core.Signal(retinaSize, retinaSize); //Visual matrix
+            LEC_Color = new CDZNET.Core.Signal(retinaSize*4, retinaSize); //Visual matrix (RED=0001 / BLUE=0010 / GREEN=0100 / YELLOW=1000)
             LEC_Orientation = new CDZNET.Core.Signal(retinaSize, retinaSize); //Visual matrix
             LEC_Shape = new CDZNET.Core.Signal(retinaSize, retinaSize); //Visual matrix
             MEC = new CDZNET.Core.Signal(2, 1); //Proprioception/Grid Cells
 
-            //2-Areas
-            CA3 = new CDZNET.Core.MMNodeSOM(new CDZNET.Point2D(50, 50), false); //Here you specify which algo to be used
-            //CA3 = new CDZNET.Core.MMNodeLookupTable(new Point2D(1, 1)); //Here you specify which algo to be used
-            (CA3 as MMNodeSOM).learningRate = 0.01;
-            (CA3 as MMNodeSOM).elasticity = 2.0;
+            //2-Areas          
+            CA3 = new CDZNET.Core.MMNodeLookupTable(new Point2D(1, 1)); //Here you specify which algo to be used
+            (CA3 as MMNodeLookupTable).TRESHOLD_SIMILARITY = 0.1;
+            (CA3 as MMNodeLookupTable).learningRate = 0.1;
+            //CA3 = new CDZNET.Core.MMNodeSOM(new CDZNET.Point2D(50, 50), false); //Here you specify which algo to be used
+            //(CA3 as MMNodeSOM).learningRate = 0.1;
+            //(CA3 as MMNodeSOM).elasticity = 10.0;
+            //(CA3 as MMNodeSOM).activityRatioToConsider = 1.0;
 
             //Define which signal will enter CA3
             CA3.addModality(LEC_Color, "Color");
@@ -80,12 +89,12 @@ namespace VowelWorldModel
             //Explore the world
             Random rnd = new Random();
             StreamWriter logFile = new StreamWriter("errorLog.csv");
-            logFile.WriteLine("t,realColor,realOrientation,color->orientation,orientation->color,Eorientation,Ecolor");
+            logFile.WriteLine("t,realColor,realOrientation, predColor, predOrientation,orientation->color, color->orientation, Ecolor,Eorientation");
 
             //int explorationSteps = 1000;
             //for (int step = 0; step < explorationSteps; step++)
             int steps = 0;
-            while (steps<5000 && mainLoopThread.IsAlive)
+            while (steps<1000 && mainLoopThread.IsAlive)
             {
                 //-----------------
                 //Saccade somewhere
@@ -104,7 +113,23 @@ namespace VowelWorldModel
                     for (int j = -retinaSize / 2; j <= retinaSize / 2; j++)
                     {
                         Cell px = world.cells[nextX + i, nextY+ j];
-                        LEC_Color.reality[retinaSize / 2 + i, retinaSize / 2 + j] = px.colorValue;
+
+                        double[] colorCode;
+                        if (px.colorValue < 1.0 / 4.0)          //BLUE
+                            colorCode = CODE_BLUE;
+                        else if (px.colorValue < 1.0 / 2.0)     //GREEN
+                            colorCode = CODE_GREEN;
+                        else if (px.colorValue < 3.0 / 4.0)     //RED
+                            colorCode = CODE_RED;
+                        else                                    //YELLOW
+                            colorCode = CODE_YELLOW; ;
+
+                        for (int compo = 0; compo < 4; compo++)
+                        {
+                            LEC_Color.reality[retinaSize / 2 + i + compo, retinaSize / 2 + j] = colorCode[compo];
+                        }
+
+                        //Other features
                         LEC_Orientation.reality[retinaSize / 2 + i, retinaSize / 2 + j] = Math.Abs(px.orientation % 180.0) / 180.0;
                         LEC_Shape.reality[retinaSize / 2 + i, retinaSize / 2 + j] = px.shape / (double)shapeCount; //  !!! This encoding is bad because it defines intrinsic shape distance
                     }
@@ -115,29 +140,95 @@ namespace VowelWorldModel
                 CA3.Converge();
                 CA3.Diverge();
 
-                //-----------------
-                //Monitor the errors             
-                //1-
-                Dictionary<Signal, double[,]> orientationFromColor = CA3.Evaluate(new List<CDZNET.Core.Signal>() { LEC_Color} );
-                double predictedOrientation = LEC_Orientation.prediction[0,0];
-                Dictionary<Signal, double[,]> colorFromOrientation = CA3.Evaluate(new List<CDZNET.Core.Signal>() { LEC_Orientation } );
-                double predictedColor = LEC_Color.prediction[0, 0];
+                log(logFile, steps);
 
-                logFile.WriteLine(steps + "," + 
-                    LEC_Color.reality[0,0]+ "," + 
-                    LEC_Orientation.reality[0,0]+ "," +
-                    predictedOrientation + "," +
-                    predictedColor   + "," +    
-                    Math.Pow(predictedColor-LEC_Color.reality[0,0],2.0)   + "," +   
-                    Math.Pow(predictedOrientation-LEC_Orientation.reality[0,0],2.0)             
-                    );
-                logFile.Flush();
                 steps++;
             }
+
+            //Test Phase
+            //1--Make sure we do not modify the network
+            if (CA3 is MMNodeLookupTable)
+            {
+                (CA3 as MMNodeLookupTable).allowTemplateCreation = false;
+                (CA3 as MMNodeLookupTable).learningRate = 0.0;
+            }
+            if (CA3 is MMNodeSOM)
+            {
+                (CA3 as MMNodeSOM).learningRate = 0.0;
+            }
+
+            //2-- Use a never encountered equidistant color (i.e (0 0 0 0)
+            for (int i = -retinaSize / 2; i <= retinaSize / 2; i++)
+                for (int j = -retinaSize / 2; j <= retinaSize / 2; j++)
+                    for (int compo = 0; compo < 4; compo++)
+                        LEC_Color.reality[retinaSize / 2 + i + compo, retinaSize / 2 + j] = 0.0;
+
+            //Test with different orientations
+            for (double orientation = 0; orientation <= 1.0; orientation+=0.1)
+            {
+                for (int i = -retinaSize / 2; i <= retinaSize / 2; i++)
+                    for (int j = -retinaSize / 2; j <= retinaSize / 2; j++)
+                        LEC_Orientation.reality[retinaSize / 2 + i, retinaSize / 2 + j] = orientation;
+
+                CA3.Converge();
+                CA3.Diverge();
+                log(logFile, -1);
+            }
+
+            MessageBox.Show("Testing done.");
             logFile.Close();
         }
 
+        string GetString(double[,] a, string delim = " ")
+        {
+            string s = "";
+            for (int i = 0; i < a.GetLength(0); i++)
+            {
+                for (int j = 0; j < a.GetLength(1); j++)
+                {
+                    s += a[i,j].ToString();
+                    s += delim;
+                }           
+            }
+            return s;
+        }
 
+        void log(StreamWriter logFile, int recordingCount)
+        {
+            Dictionary<Signal, double[,]> fullPredictionError = CA3.Evaluate( CA3.modalities ); //Evaluate with all modalities
+            double[,] orientationFromAll = LEC_Orientation.prediction.Clone() as double[,];
+            double[,] colorFromAll = LEC_Color.prediction.Clone() as double[,];
+
+            //Only from orientation
+            Dictionary<Signal, double[,]> colorFromOrientationError = CA3.Evaluate(new List<CDZNET.Core.Signal>() { LEC_Orientation });
+            double[,] colorFromOrientation = LEC_Color.prediction.Clone() as double[,];
+
+            //Only from color
+            Dictionary<Signal, double[,]> orientationFromColorError = CA3.Evaluate(new List<CDZNET.Core.Signal>() { LEC_Color });
+            double[,] orientationFromColor = LEC_Orientation.prediction.Clone() as double[,];
+
+
+            logFile.WriteLine(
+                recordingCount + "," +
+                GetString(LEC_Color.reality) + "," +
+                GetString(LEC_Orientation.reality) + "," +
+                GetString(colorFromAll) + "," +
+                GetString(orientationFromAll) + "," +
+                GetString(colorFromOrientation) + "," +
+                GetString(orientationFromColor) + "," +
+                GetSumSquared(colorFromOrientationError[LEC_Color]) + "," +
+                GetSumSquared(orientationFromColorError[LEC_Orientation]) 
+                );
+
+            logFile.Flush();
+        }
+
+        double GetSumSquared(double[,] a)
+        {
+            double error = 0.0;
+            CDZNET.Helpers.ArrayHelper.ForEach(a, false, (x, y) => { error += Math.Pow(a[x, y], 2.0); });
+            return error;
+        }
 
         //---------------------VISUALIZATION------------------
         #region Visualuzation
