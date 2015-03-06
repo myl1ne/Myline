@@ -15,6 +15,12 @@ namespace CDZNET.Core
         public double learningRate;
         public double elasticity;
         bool useWinnerPositionAsOutput;
+        /// <summary>
+        /// Value to represent which portion of the whole population will be used when predicting
+        /// The value is the proportion of the winner activity required for a neuron to be considered in the predicting population
+        /// [0,1.0] 0=all population, 1=only the winner ex aeqo
+        /// </summary>
+        public double activityRatioToConsider;
 
         #region Delegates (helpers)
         private delegate void Operation2D(int x, int y);
@@ -53,6 +59,7 @@ namespace CDZNET.Core
             useWinnerPositionAsOutput = useOnlyWinnerAsOutput;
             learningRate = 0.1;
             elasticity = 4.0;
+            activityRatioToConsider = 0.95;
 
             this.onConvergence += HandleConvergence;
             this.onDivergence += HandleDivergence;
@@ -146,14 +153,14 @@ namespace CDZNET.Core
             foreach(Signal s in modalities)
             {
                 //Directly take the winner RF as the prediction
-                if (useWinnerPositionAsOutput)
-                {
-                    ForEach(s.prediction, true, (x, y) =>
-                    {
-                        s.prediction[x, y] = weights[s][x, y, (int)winner.X, (int)winner.Y];
-                    });
-                }
-                else
+                //if (useWinnerPositionAsOutput)
+                //{
+                //    ForEach(s.prediction, true, (x, y) =>
+                //    {
+                //        s.prediction[x, y] = weights[s][x, y, (int)winner.X, (int)winner.Y];
+                //    });
+                //}
+                //else
                 {
                     //Zero the inputs & allocate the contribution table
                     double[,] contribution = new double[s.Width, s.Height];
@@ -167,7 +174,7 @@ namespace CDZNET.Core
                     //Could be replaced by SoftMax
                     ForEach(weights[s],false, (x1, y1, x2, y2) =>
                     {
-                        if (activity[x2, y2] > 0.95)
+                        if (activity[x2, y2] >= activityRatioToConsider)
                         {
                             s.prediction[x1, y1] += weights[s][x1, y1, x2, y2] * activity[x2, y2];
                             contribution[x1, y1] += activity[x2, y2];

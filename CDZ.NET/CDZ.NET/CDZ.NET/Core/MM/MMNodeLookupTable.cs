@@ -227,17 +227,20 @@ namespace CDZNET.Core
 
                 foreach (Signal sSource in modalities)
                 {
-                    if (sSource != sTarget)
+                    //if (sSource != sTarget)
                     {
+                        //First we check if we are not completely wrong about how we represent this modality
+                        double confidence = bestTemplates[sSource].Value; //(This varies between [0,1])
+
                         ArrayHelper.ForEach(sTarget.prediction, false, (x, y) =>
                         {
                             int encounters = predictions[sTarget][sSource].mostLikely.Value;
-                            double trustFactor = encounters * modalitiesInfluence[sSource];
+                            double trustFactor = (1-confidence) * encounters * modalitiesInfluence[sSource];
                             sTarget.prediction[x, y] += trustFactor * predictions[sTarget][sSource].mostLikely.Key.template[x, y];
                             contributions[x, y] += trustFactor;
 
                             encounters = predictions[sTarget][sSource].mostClose.Value;
-                            trustFactor = encounters * modalitiesInfluence[sSource];
+                            trustFactor = (confidence) * encounters * modalitiesInfluence[sSource];
                             sTarget.prediction[x, y] += trustFactor * predictions[sTarget][sSource].mostClose.Key.template[x, y];
                             contributions[x, y] += trustFactor;                 
                         });
