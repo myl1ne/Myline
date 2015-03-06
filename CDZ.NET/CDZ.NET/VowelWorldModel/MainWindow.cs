@@ -66,8 +66,9 @@ namespace VowelWorldModel
             CA3 = new CDZNET.Core.MMNodeLookupTable(new Point2D(1, 1)); //Here you specify which algo to be used
             (CA3 as MMNodeLookupTable).TRESHOLD_SIMILARITY = 0.1;
             (CA3 as MMNodeLookupTable).learningRate = 0.1;
+
             //CA3 = new CDZNET.Core.MMNodeSOM(new CDZNET.Point2D(50, 50), false); //Here you specify which algo to be used
-            //(CA3 as MMNodeSOM).learningRate = 0.1;
+            //(CA3 as MMNodeSOM).learningRate = 0.3;
             //(CA3 as MMNodeSOM).elasticity = 10.0;
             //(CA3 as MMNodeSOM).activityRatioToConsider = 1.0;
 
@@ -89,7 +90,7 @@ namespace VowelWorldModel
             //Explore the world
             Random rnd = new Random();
             StreamWriter logFile = new StreamWriter("errorLog.csv");
-            logFile.WriteLine("t,realColor,realOrientation, predColor, predOrientation,orientation->color, color->orientation, Ecolor,Eorientation");
+            logFile.WriteLine("t,realColor0,realColor1,realColor2,realColor3,realOrientation, predColor0,predColor1,predColor2,predColor3, predOrientation,orientation->color0,orientation->color1,orientation->color2,orientation->color3, color->orientation, Ecolor,Eorientation");
 
             //int explorationSteps = 1000;
             //for (int step = 0; step < explorationSteps; step++)
@@ -145,6 +146,8 @@ namespace VowelWorldModel
                 steps++;
             }
 
+
+            //-------------------------------------------------------------------------------------------------------------------
             //Test Phase
             //1--Make sure we do not modify the network
             if (CA3 is MMNodeLookupTable)
@@ -157,7 +160,7 @@ namespace VowelWorldModel
                 (CA3 as MMNodeSOM).learningRate = 0.0;
             }
 
-            //2-- Use a never encountered equidistant color (i.e (0 0 0 0)
+            //2-- Use a never encountered equidistant color (i.e (0 0 0 0) )
             for (int i = -retinaSize / 2; i <= retinaSize / 2; i++)
                 for (int j = -retinaSize / 2; j <= retinaSize / 2; j++)
                     for (int compo = 0; compo < 4; compo++)
@@ -176,19 +179,25 @@ namespace VowelWorldModel
             }
 
             MessageBox.Show("Testing done.");
+            //-------------------------------------------------------------------------------------------------------------------
+
             logFile.Close();
         }
 
-        string GetString(double[,] a, string delim = " ")
+        string GetString(double[,] a, string colDelim = ",", string rowDelim = " ")
         {
             string s = "";
             for (int i = 0; i < a.GetLength(0); i++)
             {
                 for (int j = 0; j < a.GetLength(1); j++)
                 {
-                    s += a[i,j].ToString();
-                    s += delim;
-                }           
+                    s += Math.Round(a[i, j], 2).ToString();
+                    if (j != a.GetLength(1) - 1)
+                        s += rowDelim;   
+                } 
+
+                if (i != a.GetLength(0) - 1)
+                    s += colDelim;    
             }
             return s;
         }
