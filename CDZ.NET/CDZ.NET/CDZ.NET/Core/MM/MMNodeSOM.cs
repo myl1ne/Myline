@@ -89,9 +89,11 @@ namespace CDZNET.Core
                 ForEach(weights[s], false, (x1, y1, x2, y2) =>
                     {
                         activities[s][x2, y2] += (1.0 - Math.Abs(weights[s][x1, y1, x2, y2] - s.reality[x1, y1]))/signalDim;
-                        activity[x2,y2] += modalitiesInfluence[s] * activities[s][x2, y2];
+                        //activity[x2,y2] += modalitiesInfluence[s] * activities[s][x2, y2];
                     }
                     );
+
+                ForEach(activity, true, (x, y) => { activity[x, y] += modalitiesInfluence[s] * activities[s][x, y]; });
             }
             
             //Divide by the sum of influences && find winner/looser
