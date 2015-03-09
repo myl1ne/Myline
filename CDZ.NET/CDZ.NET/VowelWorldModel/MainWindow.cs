@@ -18,7 +18,7 @@ namespace VowelWorldModel
     public partial class MainWindow : Form
     {
         //Parameters
-        int retinaSize = 1;
+        int retinaSize = 3;
         int shapeCount = 4;
         int worldWidth = 100;
         int worldHeight = 100;
@@ -90,8 +90,8 @@ namespace VowelWorldModel
             //Explore the world
             Random rnd = new Random();
             StreamWriter logFile = new StreamWriter("errorLog.csv");
-            logFile.WriteLine("t,realColor0,realColor1,realColor2,realColor3,realOrientation, predColor0,predColor1,predColor2,predColor3, predOrientation,orientation->color0,orientation->color1,orientation->color2,orientation->color3, color->orientation, Ecolor,Eorientation");
-
+            //logFile.WriteLine("t,realColor0,realColor1,realColor2,realColor3,realOrientation, predColor0,predColor1,predColor2,predColor3, predOrientation,orientation->color0,orientation->color1,orientation->color2,orientation->color3, color->orientation, Ecolor,Eorientation");
+            logHeadings(logFile);
             //int explorationSteps = 1000;
             //for (int step = 0; step < explorationSteps; step++)
             int steps = 0;
@@ -184,14 +184,14 @@ namespace VowelWorldModel
             logFile.Close();
         }
 
-        string GetString(double[,] a, string colDelim = ",", string rowDelim = " ")
+        string GetString(double[,] a, string colDelim = ",", string rowDelim = ",")
         {
             string s = "";
             for (int i = 0; i < a.GetLength(0); i++)
             {
                 for (int j = 0; j < a.GetLength(1); j++)
                 {
-                    s += Math.Round(a[i, j], 2).ToString();
+                    s += a[i, j].ToString();
                     if (j != a.GetLength(1) - 1)
                         s += rowDelim;   
                 } 
@@ -200,6 +200,35 @@ namespace VowelWorldModel
                     s += colDelim;    
             }
             return s;
+        }
+
+        void logHeadings(StreamWriter logFile)
+        {
+            logFile.Write("t,");
+            logFile.Write(getMatrixHeadingS("realColor", retinaSize, retinaSize, 4));
+            logFile.Write(getMatrixHeadingS("realOrientation", retinaSize, retinaSize, 1));
+            logFile.Write(getMatrixHeadingS("fullPColor", retinaSize, retinaSize,4));
+            logFile.Write(getMatrixHeadingS("fullPOrientation", retinaSize, retinaSize, 1));
+            logFile.Write(getMatrixHeadingS("partialPColor", retinaSize, retinaSize, 4));
+            logFile.Write(getMatrixHeadingS("partialPOrientation", retinaSize, retinaSize, 1));
+            logFile.WriteLine();
+            //logFile.WriteLine("t,realColor0,realColor1,realColor2,realColor3,realOrientation, predColor0,predColor1,predColor2,predColor3, predOrientation,orientation->color0,orientation->color1,orientation->color2,orientation->color3, color->orientation");
+        }
+
+        string getMatrixHeadingS(string root, int w, int h, int channels = 4)
+        {
+            string str = "";
+            for (int i = 0; i < w; i++)
+            {
+                for (int j = 0; j < h; j++)
+                {
+                    for (int c = 0; c < channels; c++)
+                    {
+                        str += root + "_" + i + "_" + j + "_" + c + ",";
+                    }
+                }
+            }
+            return str;
         }
 
         void log(StreamWriter logFile, int recordingCount)
@@ -224,9 +253,9 @@ namespace VowelWorldModel
                 GetString(colorFromAll) + "," +
                 GetString(orientationFromAll) + "," +
                 GetString(colorFromOrientation) + "," +
-                GetString(orientationFromColor) + "," +
-                GetSumSquared(colorFromOrientationError[LEC_Color]) + "," +
-                GetSumSquared(orientationFromColorError[LEC_Orientation]) 
+                GetString(orientationFromColor)// + "," +
+                //GetSumSquared(colorFromOrientationError[LEC_Color]) + "," +
+                //GetSumSquared(orientationFromColorError[LEC_Orientation]) 
                 );
 
             logFile.Flush();
