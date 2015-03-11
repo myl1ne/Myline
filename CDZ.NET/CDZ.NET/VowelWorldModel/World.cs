@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 using CDZNET;
+using System.Drawing;
 
 namespace VowelWorldModel
 {
@@ -19,16 +20,35 @@ namespace VowelWorldModel
 
         public  Cell[,] cells;
 
+        readonly double[] CODE_RED = { 1.0, 0.0, 0.0, 0.0 };
+        readonly double[] CODE_BLUE = { 0.0, 1.0, 0.0, 0.0 };
+        readonly double[] CODE_YELLOW = { 0.0, 0.0, 1.0, 0.0 };
+        readonly double[] CODE_GREEN = { 0.0, 0.0, 0.0, 1.0 };
+
         public World(int w, int h, int shapesCount = 4, double orientationVariability = 10.0f)
         {
             cells = new Cell[w, h];
             this.orientationVariability = orientationVariability;
             this.shapesCount = shapesCount;
         }
+        public double[] getColorCodeFromValue(double value)
+        {
+            double[] colorCode;
+            if (value < 1.0 / 4.0)          //BLUE
+                colorCode = CODE_BLUE;
+            else if (value < 1.0 / 2.0)     //GREEN
+                colorCode = CODE_GREEN;
+            else if (value < 3.0 / 4.0)     //RED
+                colorCode = CODE_RED;
+            else                                    //YELLOW
+                colorCode = CODE_YELLOW; ;
 
+            return colorCode;
+        }
         public void Randomize(int seedsCount)
         {
             Console.WriteLine("Randomizing world with " + seedsCount);
+            cells = new Cell[Width, Height];
 
             //Plant seeds
             for (int i = 0; i < seedsCount; i++)
@@ -130,6 +150,7 @@ namespace VowelWorldModel
                 cells[i, j].colorValue +=  ( rnd.NextDouble() * 0.2 - 0.1 );
             }
             MathHelpers.Clamp(ref cells[i, j].colorValue, 0.0, 1.0);
+            cells[i, j].colorCode = getColorCodeFromValue(cells[i, j].colorValue);
             //Debug.Log("Frequency= " + cells[i, j].frequency);
 
             //----------------------------------------------------------SEMANTIC - ORIENTATION----------------------------------------------//
@@ -156,6 +177,24 @@ namespace VowelWorldModel
             //Shape is defined by syntactic rule
             //rnd for now
             cells[i, j].shape = rnd.Next(0, shapesCount);
+        }
+
+        public Dictionary<string, Bitmap> toImages()
+        {
+            Dictionary<string, Bitmap> bmps = new Dictionary<string, Bitmap>();
+            bmps["color"] = new Bitmap(Width, Height);
+            bmps["orientation"] = new Bitmap(Width, Height);
+
+            for (int i = 0; i < Width; i++)
+            {
+                for (int j = 0; j < Height; j++)
+                {
+                    bmps["color"].SetPixel(i, j, cells[i, j].colorFromCode);
+                    int orientationColor = (int)(255 * Math.Abs(cells[i, j].orientation%180.0)/180.0);
+                    bmps["orientation"].SetPixel(i, j, Color.FromArgb(orientationColor,orientationColor,orientationColor));
+                }               
+            }
+            return bmps;
         }
     }
 }

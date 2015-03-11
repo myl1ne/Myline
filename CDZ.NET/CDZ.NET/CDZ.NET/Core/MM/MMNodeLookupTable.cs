@@ -147,7 +147,7 @@ namespace CDZNET.Core
             foreach(Signal s in modalities)
             {
                 //First check if we have a good enough template
-                if (bestTemplates[s].Key == null || (bestTemplates[s].Value > TRESHOLD_SIMILARITY && allowTemplateCreation))
+                if (bestTemplates[s].Key == null || (bestTemplates[s].Value > TRESHOLD_SIMILARITY && (!learningLocked && allowTemplateCreation)))
                 {
                     //We never encountered this specific modality pattern before.
                     //Create it with empty associations
@@ -191,11 +191,14 @@ namespace CDZNET.Core
                             //We increment the encounters counter
                             bestTemplates[sSource].Key.associations[sTarget][bestTemplates[sTarget].Key] += 1;
                         }
-                        else
+                        else 
                         {
                             //our closest prediction does not match what we see now. 
-                            //Build the association
-                            bestTemplates[sSource].Key.associations[sTarget][bestTemplates[sTarget].Key] = 1;
+                            if (!learningLocked && learningRate>0)
+                            {
+                                //Build the association
+                                bestTemplates[sSource].Key.associations[sTarget][bestTemplates[sTarget].Key] = 1;
+                            }
                             closest = new KeyValuePair<Template, int>(bestTemplates[sTarget].Key, 1);
 
                             //Propagate a rule violation signal (is it ?)
@@ -267,14 +270,17 @@ namespace CDZNET.Core
         /// <param name="nullargs"></param>
         public void HandleDivergence(object o, EventArgs nullargs)
         {
-            //We train the system by moving each pattern a bit closer to what we perceived
-            foreach (Signal sTarget in modalities)
+            if (!learningLocked)
             {
-                ArrayHelper.ForEach(sTarget.prediction, true, (x, y) => 
+                //We train the system by moving each pattern a bit closer to what we perceived
+                foreach (Signal sTarget in modalities)
                 {
-                    double error = sTarget.reality[x, y] - bestTemplates[sTarget].Key.template[x, y];
-                    bestTemplates[sTarget].Key.template[x,y] += learningRate * error; 
-                });             
+                    ArrayHelper.ForEach(sTarget.prediction, true, (x, y) =>
+                    {
+                        double error = sTarget.reality[x, y] - bestTemplates[sTarget].Key.template[x, y];
+                        bestTemplates[sTarget].Key.template[x, y] += learningRate * error;
+                    });
+                }
             }
         }
 

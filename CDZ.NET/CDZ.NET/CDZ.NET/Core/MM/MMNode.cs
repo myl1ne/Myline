@@ -15,6 +15,7 @@ namespace CDZNET.Core
         public Dictionary<Signal, double> modalitiesInfluence;
         public Dictionary<string, Signal> modalitiesLabels;
         public Dictionary<Signal, string> labelsModalities;
+        public bool learningLocked = false;
 
         #region Events
         public event EventHandler onConvergence;
@@ -65,22 +66,23 @@ namespace CDZNET.Core
         /// Read the current internal representation and predict every modality from it
         /// </summary>
         public void Diverge() { diverge(); if (onDivergence != null) onDivergence(this, null); }
- 
 
         /// <summary>
-        /// Given a subset of active signals, calculate the prediction error on all signals.
+        /// Given a subset of active signals, calculate the prediction on all signals.
         /// Basically works by setting the influence of active signals to 1 and the other to 0. Then produces a convergence/divergence
         /// operation without propagating the events (to avoid triggering the rest of the network)
         /// </summary>
-        /// <param name="activeSignals">For each modality the error matrix</param>
+        /// <param name="activeSignals">For each modality the prediction</param>
         /// <returns></returns>
-        public Dictionary<Signal, double[,]> Evaluate(List<Signal> activeSignals)
+        public Dictionary<Signal, double[,]> Predict(List<Signal> activeSignals)
         {
-            Dictionary<Signal, double[,]> errors = new Dictionary<Signal, double[,]>();
+            bool preLock = learningLocked;
+            learningLocked = true;
+            Dictionary<Signal, double[,]> predictions = new Dictionary<Signal, double[,]>();
             Dictionary<Signal, double> previousInfluences = new Dictionary<Signal, double>(modalitiesInfluence);
-            
+
             //Set the influences
-            foreach(Signal s in modalities)
+            foreach (Signal s in modalities)
             {
                 if (activeSignals.Contains(s))
                 {
@@ -96,14 +98,33 @@ namespace CDZNET.Core
             converge();
             diverge();
 
+            foreach (Signal s in modalities)
+            {
+                predictions[s] = s.prediction.Clone() as double[,];
+            }
+            //Reset the influences
+            modalitiesInfluence = previousInfluences;
+            learningLocked = preLock;
+            return predictions;
+        }
+
+        /// <summary>
+        /// Given a subset of active signals, calculate the prediction error on all signals.
+        /// Basically works by setting the influence of active signals to 1 and the other to 0. Then produces a convergence/divergence
+        /// operation without propagating the events (to avoid triggering the rest of the network)
+        /// </summary>
+        /// <param name="activeSignals">For each modality the error matrix</param>
+        /// <returns></returns>
+        public Dictionary<Signal, double[,]> Evaluate(List<Signal> activeSignals)
+        {
+            Dictionary<Signal, double[,]> errors = Predict(activeSignals);           
+
             //Compute the errors
             foreach (Signal s in modalities)
             {
                 errors[s] = s.ComputeError();
             }
 
-            //Reset the influences
-            modalitiesInfluence = previousInfluences;
             return errors;
         }
 

@@ -9,6 +9,47 @@ namespace CDZNET.GUI
 {
     public static class GeneralExtensions
     {
+        public static void fromBitmap(this double[,] signal, Bitmap bmp)
+        {
+            Bitmap tmp;
+            //Rescale if needed
+            if (bmp.Width != signal.GetLength(0) || bmp.Height != signal.GetLength(1))
+            {
+                tmp = new Bitmap(bmp, new Size(signal.GetLength(0), signal.GetLength(1)));
+            }
+            else
+            {
+                tmp = bmp;
+            }
+
+            for (int i = 0; i < tmp.Width; i++)
+            {
+                for (int j = 0; j < tmp.Height; j++)
+                {
+                    Color px = tmp.GetPixel(i, j);
+                    float value = ColorHelper.RGB2GRAYf(px) / 255.0f;
+                    signal[i, j] = value;
+                }
+            }
+        }
+
+        public static Bitmap toBitmap(this double[,] signal, Color a, Color b)
+        {
+            double min = 0.0;
+            double max = 1.0;
+            double range = max - min;
+
+            Bitmap bmp = new Bitmap(signal.GetLength(0), signal.GetLength(1), System.Drawing.Imaging.PixelFormat.Format24bppRgb); ;
+            for (int i = 0; i < bmp.Width; i++)
+            {
+                for (int j = 0; j < bmp.Height; j++)
+                {
+                    Color color = ColorHelper.InterpolateBetween(a, b, (signal[i, j] - min) / (range));
+                    bmp.SetPixel(i, j, color);
+                }
+            }
+            return bmp;
+        }
 
         public static void fromBitmap(this CDZNET.Core.Signal signal, Bitmap bmp, bool useReality)
         {

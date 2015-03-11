@@ -197,27 +197,30 @@ namespace CDZNET.Core
         public void HandleConvergence(object o, EventArgs nullargs)
         {
             //Here we apply the weight adaptation
-            bool USE_DSOM = true;            
-            //Standard SOM
-            double learningRadius = (1.0 / 4.0) * (activity.GetLength(0) + activity.GetLength(1)) / 2.0;
-            double squaredRadius2 = 2 * learningRadius * learningRadius;
-            //DSOM
-            double winnerError = 1.0 - winnerActivity;
-            double inversedSquaredElasticity = -(1 / (elasticity * elasticity));
-            foreach (Signal s in modalities)
+            if (!learningLocked)
             {
-                ForEach(weights[s], true, (x1, y1, x2, y2) =>
+                bool USE_DSOM = true;
+                //Standard SOM
+                double learningRadius = (1.0 / 4.0) * (activity.GetLength(0) + activity.GetLength(1)) / 2.0;
+                double squaredRadius2 = 2 * learningRadius * learningRadius;
+                //DSOM
+                double winnerError = 1.0 - winnerActivity;
+                double inversedSquaredElasticity = -(1 / (elasticity * elasticity));
+                foreach (Signal s in modalities)
                 {
-                    double distanceToWinner = MathHelpers.distance(x2, y2, winner.X, winner.Y, Connectivity.torus, activity.GetLength(0), activity.GetLength(1));
-                    double factor = Math.Exp(-(double)(distanceToWinner) / squaredRadius2);
+                    ForEach(weights[s], true, (x1, y1, x2, y2) =>
+                    {
+                        double distanceToWinner = MathHelpers.distance(x2, y2, winner.X, winner.Y, Connectivity.torus, activity.GetLength(0), activity.GetLength(1));
+                        double factor = Math.Exp(-(double)(distanceToWinner) / squaredRadius2);
 
-                    if (USE_DSOM)
-                        factor = learningRate * Math.Exp(inversedSquaredElasticity * (distanceToWinner / winnerError));
-                    else
-                        factor = learningRate * Math.Exp(-(double)(distanceToWinner) / squaredRadius2);
+                        if (USE_DSOM)
+                            factor = learningRate * Math.Exp(inversedSquaredElasticity * (distanceToWinner / winnerError));
+                        else
+                            factor = learningRate * Math.Exp(-(double)(distanceToWinner) / squaredRadius2);
 
-                    weights[s][x1, y1, x2, y2] += factor * (s.reality[x1, y1] - weights[s][x1, y1, x2, y2]);
-                });
+                        weights[s][x1, y1, x2, y2] += factor * (s.reality[x1, y1] - weights[s][x1, y1, x2, y2]);
+                    });
+                }
             }
         }
 
