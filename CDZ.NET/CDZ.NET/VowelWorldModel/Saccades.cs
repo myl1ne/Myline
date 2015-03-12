@@ -20,13 +20,13 @@ namespace VowelWorldModel
     {
         Random rnd = new Random();
         //Parameters
-        int retinaSize = 9;
+        int retinaSize = 3;
         int shapeCount = 4;
-        int worldWidth = 100;
-        int worldHeight = 100;
+        int worldWidth = 250;
+        int worldHeight = 250;
         int seedsNumber = 3;
-        int trainSteps = 1000;
-        int saccadeMaximumRange = 3;
+        int trainSteps = 10000;
+        int saccadeMaximumRange = 1;
         double orientationVariability = 0.0; //degrees
         World world;
         Dictionary<string, Bitmap> worldVisu;
@@ -60,14 +60,16 @@ namespace VowelWorldModel
             MEC = new CDZNET.Core.Signal(2, 1); //dX dY
 
             //2-Areas          
-            CA3 = new CDZNET.Core.MMNodeLookupTable(new Point2D(1, 1)); //Here you specify which algo to be used
-            (CA3 as MMNodeLookupTable).TRESHOLD_SIMILARITY = 0.1;
-            (CA3 as MMNodeLookupTable).learningRate = 0.1;
+            //CA3 = new CDZNET.Core.MMNodeLookupTable(new Point2D(1, 1)); //Here you specify which algo to be used
+            //(CA3 as MMNodeLookupTable).TRESHOLD_SIMILARITY = 0.1;
+            //(CA3 as MMNodeLookupTable).learningRate = 0.1;
 
-            //CA3 = new CDZNET.Core.MMNodeSOM(new CDZNET.Point2D(20, 20), false); //Here you specify which algo to be used
-            //(CA3 as MMNodeSOM).learningRate = 0.01;
-            //(CA3 as MMNodeSOM).elasticity = 5.0;
-            //(CA3 as MMNodeSOM).activityRatioToConsider = 1.0;
+            CA3 = new CDZNET.Core.MMNodeSOM(new CDZNET.Point2D(50, 50), false); //Here you specify which algo to be used
+            (CA3 as MMNodeSOM).learningRate = 0.01;
+            (CA3 as MMNodeSOM).elasticity = 2.0;
+            (CA3 as MMNodeSOM).activityRatioToConsider = 1.0;
+
+            //CA3 = new CDZNET.Core.MMNodeMatLab(new CDZNET.Point2D(1, 1), "PathToMatlabScript"); //THis will call matlab
 
             //Define which signal will enter CA3
             CA3.addModality(LEC_ColorT0, "ColorT0");
@@ -99,12 +101,12 @@ namespace VowelWorldModel
                 if (steps > trainSteps)
                 {
                     CA3.learningLocked = true;
-                    //if (steps==2*trainSteps)
-                    //{
-                    //    world.Randomize(seedsNumber);
-                    //    getWorldVisualization();
-                    //    worldCnt++;
-                    //}
+                    if (steps >= 2 * trainSteps && steps % trainSteps == 0)
+                    {
+                        world.Randomize(seedsNumber);
+                        getWorldVisualization();
+                        worldCnt++;
+                    }
                 }
                 step(logFile, steps, worldCnt);
                 steps++;
@@ -125,8 +127,8 @@ namespace VowelWorldModel
             int endY = -1; int dY = 0;
             while (endX < retinaSize / 2 || endY < retinaSize / 2 || endX >= world.Width - retinaSize / 2 || endY >= world.Width - retinaSize / 2)
             {
-                dX = rnd.Next(-saccadeMaximumRange, saccadeMaximumRange);
-                dY = rnd.Next(-saccadeMaximumRange, saccadeMaximumRange);
+                dX = rnd.Next(-saccadeMaximumRange, saccadeMaximumRange+1);
+                dY = rnd.Next(-saccadeMaximumRange, saccadeMaximumRange+1);
                 endX = startX + dX;
                 endY = startY + dY;
             }
@@ -179,24 +181,6 @@ namespace VowelWorldModel
             }
             return s;
         }
-
-        void logHeadings(StreamWriter logFile)
-        {
-            logFile.Write("t,");
-            logFile.Write("learning,");
-            logFile.Write("world,");
-            logFile.Write(getMatrixHeadingS("realColorT0", retinaSize, retinaSize, 4));
-            logFile.Write(getMatrixHeadingS("realColorT1", retinaSize, retinaSize, 4));
-            logFile.Write(getMatrixHeadingS("realSaccade", 1, 1, 2));
-            logFile.Write(getMatrixHeadingS("c0sacc->c1", retinaSize, retinaSize, 4));
-            logFile.Write("ERRORc0sacc->c1,");
-            logFile.Write(getMatrixHeadingS("c1sacc->c0", retinaSize, retinaSize, 4));
-            logFile.Write("ERRORc1sacc->c0,");
-            logFile.Write(getMatrixHeadingS("c0c1->sacc", 1, 1, 2));
-            logFile.Write("ERRORc0c1->sacc,");
-            logFile.WriteLine();
-        }
-
         string getMatrixHeadingS(string root, int w, int h, int channels = 4)
         {
             string str = "";
@@ -213,6 +197,27 @@ namespace VowelWorldModel
             return str;
         }
 
+        void logHeadings(StreamWriter logFile)
+        {
+            logFile.Write("t,");
+            logFile.Write("learning,");
+            logFile.Write("world,");
+            logFile.Write(getMatrixHeadingS("realColorT0", retinaSize, retinaSize, 4));
+            logFile.Write(getMatrixHeadingS("realColorT1", retinaSize, retinaSize, 4));
+            logFile.Write(getMatrixHeadingS("realSaccade", 1, 1, 2));
+            logFile.Write(getMatrixHeadingS("c0sacc->c1", retinaSize, retinaSize, 4));
+            logFile.Write(getMatrixHeadingS("ERRORc0sacc->c1", retinaSize, retinaSize, 4));
+            logFile.Write("ERRORleft,");
+            logFile.Write("ERRORtop,");
+            logFile.Write("ERRORright,");
+            logFile.Write("ERRORbottom,");
+            //logFile.Write(getMatrixHeadingS("c1sacc->c0", retinaSize, retinaSize, 4));
+            //logFile.Write("ERRORc1sacc->c0,");
+            //logFile.Write(getMatrixHeadingS("c0c1->sacc", 1, 1, 2));
+            //logFile.Write("ERRORc0c1->sacc,");
+            logFile.WriteLine();
+        }
+
         void log(StreamWriter logFile, int recordingCount, bool learning, int world)
         {
             //Dictionary<Signal, double[,]> fullPrediction = CA3.Predict( CA3.modalities ); //Evaluate with all modalities
@@ -227,6 +232,7 @@ namespace VowelWorldModel
             pictureBoxPredictedEndpoint.Image = getBitmapFromColorCode(c1Pred[LEC_ColorT1]);
             pictureBoxEndPoint.Refresh();
             pictureBoxPredictedEndpoint.Refresh();
+            Dictionary<string, double> directionalErrors = getDirectionalErrors(LEC_ColorT1.reality, c1Pred[LEC_ColorT1]);
             if (logFile != null)
             {
                 logFile.WriteLine(
@@ -237,11 +243,16 @@ namespace VowelWorldModel
                     GetString(LEC_ColorT1.reality) + "," +
                     GetString(MEC.reality) + "," +
                     GetString(c1Pred[LEC_ColorT1]) + "," +
-                    GetSumSquared(c1Pred[LEC_ColorT1], LEC_ColorT1.reality) + "," +
-                    GetString(c0Pred[LEC_ColorT0]) + "," +
-                    GetSumSquared(c0Pred[LEC_ColorT0], LEC_ColorT0.reality) + "," +
-                    GetString(saccPred[MEC]) + "," +
-                    GetSumSquared(saccPred[MEC], MEC.reality)
+                    GetString(GetSquaredError(LEC_ColorT1.reality, c1Pred[LEC_ColorT1])) + "," +
+                    directionalErrors["left"] + "," +
+                    directionalErrors["top"] + "," +
+                    directionalErrors["right"] + "," +
+                    directionalErrors["bottom"]
+                    //GetSumSquared(c1Pred[LEC_ColorT1], LEC_ColorT1.reality) + "," +
+                    //GetString(c0Pred[LEC_ColorT0]) + "," +
+                    //GetSumSquared(c0Pred[LEC_ColorT0], LEC_ColorT0.reality) + "," +
+                    //GetString(saccPred[MEC]) + "," +
+                    //GetSumSquared(saccPred[MEC], MEC.reality)
                     );
 
                 logFile.Flush();
@@ -253,6 +264,48 @@ namespace VowelWorldModel
             double error = 0.0;
             CDZNET.Helpers.ArrayHelper.ForEach(truth, false, (x, y) => { error += Math.Pow(truth[x, y] - estimate[x,y], 2.0); });
             return error;
+        }
+        double[,] GetSquaredError(double[,] truth, double[,] estimate)
+        {
+            double[,] error = truth.Clone() as double[,];
+            CDZNET.Helpers.ArrayHelper.ForEach(truth, false, (x, y) => { error[x, y] = Math.Pow(error[x, y] - estimate[x, y], 2.0); });
+            return error;
+        }
+
+        Dictionary<string, double> getDirectionalErrors(double[,] truth, double[,] estimate)
+        {
+            Dictionary<string, double> errors = new Dictionary<string,double>();
+
+            errors["left"] = 0.0;
+            errors["top"] = 0.0;
+            errors["right"] = 0.0;
+            errors["bottom"] = 0.0;
+
+            for (int x = 0; x < truth.GetLength(0); x+=4)
+			{
+                for (int y = 0; y < truth.GetLength(1); y++)
+			    {
+                    double e = 0.0;
+                    for (int compo = 0; compo < 4; compo++)
+                    {
+                        e += Math.Pow(truth[x+compo, y] - estimate[x+compo, y], 2.0);
+                    } 
+                    if (x == 0)
+                        errors["left"] += e;
+                    if (y == 0)
+                        errors["top"] += e;
+                    if (x == truth.GetLength(0)-4)
+                        errors["right"] += e;
+                    if (y == truth.GetLength(1)-1)
+                        errors["bottom"] += e;			 
+			    }			 
+			}
+
+            errors["left"] /= truth.GetLength(1);
+            errors["right"] /= truth.GetLength(1);
+            errors["top"] /= truth.GetLength(0);
+            errors["bottom"] /= truth.GetLength(0);
+            return errors;
         }
 
         //---------------------VISUALIZATION------------------

@@ -31,6 +31,15 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Optimized|AnyCPU'">
+    <OutputPath>bin\Optimized\</OutputPath>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>x64</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <Prefer32Bit>true</Prefer32Bit>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -44,6 +53,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Cell.cs" />
+    <Compile Include="ModalPx.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ModalPx.Designer.cs">
+      <DependentUpon>ModalPx.cs</DependentUpon>
+    </Compile>
     <Compile Include="Saccades.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -74,6 +89,9 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="ModalPx.resx">
+      <DependentUpon>ModalPx.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Saccades.resx">
       <DependentUpon>Saccades.cs</DependentUpon>
     </EmbeddedResource>

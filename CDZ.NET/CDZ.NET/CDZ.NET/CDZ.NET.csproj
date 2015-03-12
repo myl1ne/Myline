@@ -29,6 +29,16 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Optimized|AnyCPU'">
+    <OutputPath>bin\Optimized\</OutputPath>
+    <DefineConstants>
+    </DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>x64</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -42,6 +52,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Core\MM\MMNodeLookupTable.cs" />
+    <Compile Include="Core\MM\MMNodeMatLab.cs" />
+    <Compile Include="Core\Neurons\Neuron.cs" />
+    <Compile Include="Core\Neurons\Synapse.cs" />
     <Compile Include="Core\Node.cs" />
     <Compile Include="Core\IO\IONode.cs" />
     <Compile Include="Core\IO\IONodeAdaptive.cs" />
@@ -68,6 +81,17 @@
     <Compile Include="Helpers\Point3D.cs" />
     <Compile Include="Helpers\Point2D.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <COMReference Include="MLApp">
+      <Guid>{C36E46AB-6A81-457B-9F91-A7719A06287F}</Guid>
+      <VersionMajor>1</VersionMajor>
+      <VersionMinor>0</VersionMinor>
+      <Lcid>0</Lcid>
+      <WrapperTool>tlbimp</WrapperTool>
+      <Isolated>False</Isolated>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </COMReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

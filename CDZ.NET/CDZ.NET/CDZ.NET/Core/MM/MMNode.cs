@@ -35,10 +35,13 @@ namespace CDZNET.Core
         {
             modalities.Add(s);
             modalitiesInfluence[s] = 1.0f;
-            labelsModalities[s] = label;
+            if (label == null)
+            {
+                label = "unknown_" + modalities.Count;
+            }
 
-            if (label != null)
-                modalitiesLabels[label] = s;
+            labelsModalities[s] = label;
+            modalitiesLabels[label] = s;
         }
 
         public void Cycle()
