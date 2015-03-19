@@ -20,12 +20,14 @@ namespace VowelWorldModel
     {
         Random rnd = new Random();
         //Parameters
-        int retinaSize = 2;
+        enum Model { SOM, LUT, Matlab };
+        Model modelUsed = Model.Matlab;
+        int retinaSize = 3;
         int shapeCount = 4;
         int worldWidth = 100;
         int worldHeight = 100;
         int seedsNumber = 3;
-        int trainSteps = 1000;
+        int trainSteps = 10000;
         double orientationVariability = 0.0; //degrees
         World world;
         Dictionary<string, Bitmap> worldVisu;
@@ -51,16 +53,32 @@ namespace VowelWorldModel
 
             //Generate the network
             //1-Areas          
-            CA3 = new CDZNET.Core.MMNodeLookupTable(new Point2D(1, 1)); //Here you specify which algo to be used
-            (CA3 as MMNodeLookupTable).TRESHOLD_SIMILARITY = 0.1;
-            (CA3 as MMNodeLookupTable).learningRate = 0.1;
+            switch (modelUsed)
+            {
+                case Model.SOM:
+                    CA3 = new CDZNET.Core.MMNodeSOM(new CDZNET.Point2D(20, 20), false); //Here you specify which algo to be used
+                    (CA3 as MMNodeSOM).learningRate = 0.03;
+                    (CA3 as MMNodeSOM).elasticity = 2.0;
+                    (CA3 as MMNodeSOM).activityRatioToConsider = 1.0;
+                    break;
 
-            //CA3 = new CDZNET.Core.MMNodeSOM(new CDZNET.Point2D(20, 20), false); //Here you specify which algo to be used
-            //(CA3 as MMNodeSOM).learningRate = 0.01;
-            //(CA3 as MMNodeSOM).elasticity = 2.0;
-            //(CA3 as MMNodeSOM).activityRatioToConsider = 1.0;
+                case Model.LUT:
+                    CA3 = new CDZNET.Core.MMNodeLookupTable(new Point2D(1, 1)); //Here you specify which algo to be used
+                    (CA3 as MMNodeLookupTable).TRESHOLD_SIMILARITY = 0.1;
+                    (CA3 as MMNodeLookupTable).learningRate = 0.1;
+                    break;
 
-            //CA3 = new CDZNET.Core.MMNodeMatLab(new CDZNET.Point2D(1, 1), "PathToMatlabScript"); //THis will call matlab
+                case Model.Matlab:
+                    CA3 = new CDZNET.Core.MMNodeMatLab(new CDZNET.Point2D(1, 1),            //This is the size of the output (so far not set in matlab case)
+                        "CA3",                                                              //This is the name of the variable corresponding to this node in Matlab
+                        "D:/robotology/src/Myline/CDZ.NET/CDZ.NET/CDZ.NET/Core/MM/Matlab",  //Path where the script is located
+                        "dummyConvergenceDivergence"                                        //name of the function/script
+                        );
+                    break;
+
+                default:
+                    throw new Exception("Unknown model type.");
+            }
 
             //2-Inputs
             LEC_Color = new Signal[retinaSize, retinaSize];

@@ -233,7 +233,7 @@ namespace CDZNET.Core
                     //if (sSource != sTarget)
                     {
                         //First we check if we are not completely wrong about how we represent this modality
-                        double confidence = 0.0;// bestTemplates[sSource].Value; //(This varies between [0,1])
+                        double confidence = bestTemplates[sSource].Value; //(This varies between [0,1])
 
                         ArrayHelper.ForEach(sTarget.prediction, false, (x, y) =>
                         {
