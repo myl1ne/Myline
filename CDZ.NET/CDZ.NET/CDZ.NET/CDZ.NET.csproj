@@ -53,8 +53,9 @@
   <ItemGroup>
     <Compile Include="Core\MM\MMNodeLookupTable.cs" />
     <Compile Include="Core\MM\MMNodeMatLab.cs" />
+    <Compile Include="Core\MM\MMNodeMWSOM.cs" />
     <Compile Include="Core\Neurons\Neuron.cs" />
-    <Compile Include="Core\Neurons\Synapse.cs" />
+    <Compile Include="Core\Neurons\Connection.cs" />
     <Compile Include="Core\Node.cs" />
     <Compile Include="Core\IO\IONode.cs" />
     <Compile Include="Core\IO\IONodeAdaptive.cs" />
