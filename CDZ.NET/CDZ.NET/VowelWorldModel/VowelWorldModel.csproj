@@ -53,6 +53,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Cell.cs" />
+    <Compile Include="MNNodeFactory.cs" />
     <Compile Include="ModalPx.cs">
       <SubType>Form</SubType>
     </Compile>

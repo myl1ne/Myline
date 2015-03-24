@@ -16,9 +16,9 @@ namespace VowelWorldModel
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            //Application.Run(new MainWindow());
+            Application.Run(new MainWindow());
             //Application.Run(new Saccades());
-            Application.Run(new ModalPx());
+            //Application.Run(new ModalPx());
         }
     }
 }

@@ -191,7 +191,10 @@ namespace VowelWorldModel
                 {
                     bmps["color"].SetPixel(i, j, cells[i, j].colorFromCode);
                     int orientationColor = (int)(255 * Math.Abs(cells[i, j].orientation%180.0)/180.0);
-                    bmps["orientation"].SetPixel(i, j, Color.FromArgb(orientationColor,orientationColor,orientationColor));
+                    if (double.IsNaN(cells[i, j].orientation))
+                        bmps["orientation"].SetPixel(i, j, Color.Red);
+                    else
+                        bmps["orientation"].SetPixel(i, j, Color.FromArgb(orientationColor,orientationColor,orientationColor));
                 }               
             }
             return bmps;

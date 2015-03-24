@@ -20,6 +20,11 @@ namespace CDZNET.Core
         #region Events
         public event EventHandler onConvergence;
         public event EventHandler onDivergence;
+
+        public delegate void BatchHandler(int maximumEpoch, double MSEStopCriterium);
+        public event BatchHandler onBatchStart;
+        public delegate void EpochHandler(int currentEpoch, int maximumEpoch, Dictionary<Signal, double> modalitiesMSE, double MSE);
+        public event EpochHandler onEpoch;
         #endregion
 
         public MMNode(Point2D outputDim)
@@ -129,6 +134,62 @@ namespace CDZNET.Core
             }
 
             return errors;
+        }
+
+
+        public void Epoch(List<Dictionary<Signal, double[,]> > trainingSet, out Dictionary<Signal, double> modalitiesMeanSquarredError, out double globalMeanSquarred)
+        {
+            modalitiesMeanSquarredError = new Dictionary<Signal, double>();     
+            foreach(Signal s in modalities)
+                modalitiesMeanSquarredError[s] = 0.0;
+
+            foreach(Dictionary<Signal, double[,]> sample in trainingSet)
+            {
+                //assign the modalities
+                foreach(Signal s in modalities)
+                    s.reality = sample[s].Clone() as double[,];
+                
+                //Process
+                Converge();
+                Diverge();
+
+                //Compute error
+                foreach (Signal s in modalities)
+                    modalitiesMeanSquarredError[s] += s.ComputeMeanSquarredError();
+            }
+
+            globalMeanSquarred = 0.0;
+            foreach (Signal s in modalities)
+            {
+                modalitiesMeanSquarredError[s] /= trainingSet.Count;
+                globalMeanSquarred += modalitiesMeanSquarredError[s];
+            }
+            globalMeanSquarred /= modalities.Count;
+        }
+
+        /// <summary>
+        /// Run a batch (i.e a given number of epochs or min MSE reached)
+        /// </summary>
+        /// <param name="trainingSet">The training set to be used</param>
+        /// <param name="maximumEpochs">The maximum number of epochs to run</param>
+        /// <param name="stopCritMSE">An optional MSE criterium for stopping</param>
+        /// <returns>The number of epoch ran when the batch stopped</returns>
+        public int Batch(List<Dictionary<Signal, double[,]> > trainingSet, int maximumEpochs, double stopCritMSE = 0.0)
+        {
+            if (onBatchStart != null)
+                onBatchStart(maximumEpochs, stopCritMSE);
+
+            double lastEpochMSE = double.PositiveInfinity;
+            Dictionary<Signal, double> modalitiesMSE;
+            
+            int i = 0;
+            for (; i < maximumEpochs && lastEpochMSE>stopCritMSE; i++)
+			{
+			    Epoch(trainingSet, out modalitiesMSE, out lastEpochMSE);
+                if (onEpoch!=null)
+                    onEpoch(i, maximumEpochs, modalitiesMSE, lastEpochMSE);
+			}
+            return i;
         }
 
     }

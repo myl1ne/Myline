@@ -63,5 +63,39 @@ namespace VowelWorldModel
                     c = Color.Yellow;
                 return c;
         }
+
+        public double[] orientationCode
+        {
+            get
+            {
+                double[] code = new double[2];
+                //0 = [0,0]
+                if (orientation < 45.0)
+                {
+                    code[0] = 0.0;
+                    code[1] = orientation / 45.0;
+                    //45 = [0,1]
+                }
+                else if (orientation < 90.0)
+                {
+                    code[0] = (orientation - 45) / (90.0 - 45.0);
+                    code[1] = 1.0;
+                    //90 = [1,1]
+                }
+                else if (orientation < 135.0)
+                {
+                    code[0] = 1.0; ;
+                    code[1] = 1.0 - (orientation - 90.0) / (135.0 - 90.0);
+                    //135 = [1,0]
+                }
+                else
+                {
+                    code[0] = 1.0 - (orientation - 135.0) / (180.0-135.0);
+                    code[1] = 0.0;
+                    //180 = [0,0]
+                }
+                return code;
+            }
+        }
     }
 }

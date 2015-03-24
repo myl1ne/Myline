@@ -20,14 +20,13 @@ namespace VowelWorldModel
     {
         Random rnd = new Random();
         //Parameters
-        enum Model { SOM, LUT, Matlab };
-        Model modelUsed = Model.Matlab;
+        MNNodeFactory.Model modelUsed = MNNodeFactory.Model.MWSOM;
         int retinaSize = 3;
         int shapeCount = 4;
         int worldWidth = 100;
         int worldHeight = 100;
         int seedsNumber = 3;
-        int trainSteps = 10000;
+        int trainSteps = 1000;
         double orientationVariability = 0.0; //degrees
         World world;
         Dictionary<string, Bitmap> worldVisu;
@@ -53,32 +52,7 @@ namespace VowelWorldModel
 
             //Generate the network
             //1-Areas          
-            switch (modelUsed)
-            {
-                case Model.SOM:
-                    CA3 = new CDZNET.Core.MMNodeSOM(new CDZNET.Point2D(20, 20), false); //Here you specify which algo to be used
-                    (CA3 as MMNodeSOM).learningRate = 0.03;
-                    (CA3 as MMNodeSOM).elasticity = 2.0;
-                    (CA3 as MMNodeSOM).activityRatioToConsider = 1.0;
-                    break;
-
-                case Model.LUT:
-                    CA3 = new CDZNET.Core.MMNodeLookupTable(new Point2D(1, 1)); //Here you specify which algo to be used
-                    (CA3 as MMNodeLookupTable).TRESHOLD_SIMILARITY = 0.1;
-                    (CA3 as MMNodeLookupTable).learningRate = 0.1;
-                    break;
-
-                case Model.Matlab:
-                    CA3 = new CDZNET.Core.MMNodeMatLab(new CDZNET.Point2D(1, 1),            //This is the size of the output (so far not set in matlab case)
-                        "CA3",                                                              //This is the name of the variable corresponding to this node in Matlab
-                        "D:/robotology/src/Myline/CDZ.NET/CDZ.NET/CDZ.NET/Core/MM/Matlab",  //Path where the script is located
-                        "dummyConvergenceDivergence"                                        //name of the function/script
-                        );
-                    break;
-
-                default:
-                    throw new Exception("Unknown model type.");
-            }
+            CA3 = MNNodeFactory.obtain(modelUsed);
 
             //2-Inputs
             LEC_Color = new Signal[retinaSize, retinaSize];
@@ -122,18 +96,18 @@ namespace VowelWorldModel
         {
             //-----------------
             //Fixate somewhere
-            int startX = rnd.Next(retinaSize / 2, world.Width - retinaSize / 2);
-            int startY = rnd.Next(retinaSize / 2, world.Height - retinaSize / 2);
+            int startX = rnd.Next(0, world.Width - retinaSize);
+            int startY = rnd.Next(0, world.Height - retinaSize);
 
             //-----------------
             //Get the perceptive information
             //2-Vision
-            for (int i = -retinaSize / 2; i < retinaSize / 2; i++)
+            for (int i = 0; i < retinaSize; i++)
             {
-                for (int j = -retinaSize / 2; j < retinaSize / 2; j++)
+                for (int j = 0; j < retinaSize; j++)
                 {
                     Cell startPx = world.cells[startX + i, startY + j];
-                    Signal signal = LEC_Color[retinaSize / 2 + i, retinaSize / 2 + j];
+                    Signal signal = LEC_Color[i, j];
                     for (int compo = 0; compo < 4; compo++)
                     {
                         signal.reality[compo, 0] = startPx.colorCode[compo];

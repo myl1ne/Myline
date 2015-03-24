@@ -47,6 +47,65 @@ namespace CDZNET
             return euclideanDistance;
         }
 
+        public static double getNorm(double[] a)
+        {
+            double norm = 0.0;
+            for (int i = 0; i < a.Length; i++)
+            {
+                norm += a[i] * a[i];
+            }
+            return Math.Sqrt(norm);
+        }
+        public static double getNorm(double[,] a)
+        {
+            double norm = 0.0;
+            for (int i = 0; i < a.GetLength(0); i++)
+            {
+                for (int j = 0; j < a.GetLength(1); j++)
+                {
+                    norm += a[i,j] * a[i,j];
+                }
+            }
+            return Math.Sqrt(norm);
+        }
+
+        public static double[] normalize(double[] a)
+        {
+            double[] b = a.Clone() as double[];
+
+            double norm = getNorm(a);
+            if (norm == 0)
+            {
+                throw new Exception("Norm == 0.");
+            }
+
+            for (int i = 0; i < a.Length; i++)
+            {
+                b[i] /= norm;
+            }
+
+            return b;
+        }
+        public static double[,] normalize(double[,] a)
+        {
+            double[,] b = a.Clone() as double[,];
+
+            double norm = getNorm(a);
+            if (norm == 0)
+            {
+                throw new Exception("Norm == 0.");
+            }
+
+            for (int i = 0; i < a.GetLength(0); i++)
+            {
+                for (int j = 0; j < a.GetLength(1); j++)
+                {
+                    b[i,j] /= norm;
+                }
+            }
+
+            return b;
+        }
         public static float distance(float x1, float y1, float x2, float y2, Connectivity connectivity, float width = 1.0f, float height = 1.0f)
         {
             double d = 0.0;

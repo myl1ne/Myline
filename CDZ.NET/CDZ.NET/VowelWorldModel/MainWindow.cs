@@ -18,14 +18,13 @@ namespace VowelWorldModel
     public partial class MainWindow : Form
     {
         //Parameters
-        enum Model { SOM, LUT, Matlab };
-        Model modelUsed = Model.Matlab;
+        MNNodeFactory.Model modelUsed = MNNodeFactory.Model.MWSOM;
         int retinaSize = 1;
         int shapeCount = 4;
-        int worldWidth = 100;
-        int worldHeight = 100;
+        int worldWidth = 20;
+        int worldHeight = 20;
         int seedsNumber = 3;
-        int trainSteps = 5000;
+        int trainSteps = 1000;
         double orientationVariability = 0.0; //degrees
         World world;
         Dictionary<string, Bitmap> worldVisu;
@@ -59,33 +58,8 @@ namespace VowelWorldModel
             LEC_Shape = new CDZNET.Core.Signal(retinaSize, retinaSize); //Visual matrix
             MEC = new CDZNET.Core.Signal(2, 1); //Proprioception/Grid Cells
 
-            //2-Areas          
-            switch (modelUsed)
-            {
-                case Model.SOM:
-                    CA3 = new CDZNET.Core.MMNodeSOM(new CDZNET.Point2D(20, 20), false); //Here you specify which algo to be used
-                    (CA3 as MMNodeSOM).learningRate = 0.03;
-                    (CA3 as MMNodeSOM).elasticity = 2.0;
-                    (CA3 as MMNodeSOM).activityRatioToConsider = 1.0;
-                    break;
-
-                case Model.LUT:
-                    CA3 = new CDZNET.Core.MMNodeLookupTable(new Point2D(1, 1)); //Here you specify which algo to be used
-                    (CA3 as MMNodeLookupTable).TRESHOLD_SIMILARITY = 0.1;
-                    (CA3 as MMNodeLookupTable).learningRate = 0.1;
-                    break;
-
-                case Model.Matlab:
-                    CA3 = new CDZNET.Core.MMNodeMatLab(new CDZNET.Point2D(1, 1),            //This is the size of the output (so far not set in matlab case)
-                        "CA3",                                                              //This is the name of the variable corresponding to this node in Matlab
-                        "D:/robotology/src/Myline/CDZ.NET/CDZ.NET/CDZ.NET/Core/MM/Matlab",  //Path where the script is located
-                        "dummyConvergenceDivergence"                                        //name of the function/script
-                        );
-                    break;
-
-                default:
-                    throw new Exception("Unknown model type.");
-            }
+            //2-Areas
+            CA3 = MNNodeFactory.obtain(modelUsed);
 
             //Define which signal will enter CA3
             CA3.addModality(LEC_Color, "Color");
@@ -149,8 +123,8 @@ namespace VowelWorldModel
             {
                 //-----------------
                 //Saccade somewhere
-                int nextX = rnd.Next(retinaSize / 2, world.Width - retinaSize / 2);
-                int nextY = rnd.Next(retinaSize / 2, world.Height - retinaSize / 2);
+                int nextX = rnd.Next(0, world.Width - retinaSize);
+                int nextY = rnd.Next(0, world.Height - retinaSize);
                 drawFixationPoint(nextX, nextY);
 
                 //-----------------
@@ -160,21 +134,21 @@ namespace VowelWorldModel
                 MEC.reality[1, 0] = nextY / (double)world.Height; //We want in range [0,1]
 
                 //2-Vision
-                for (int i = -retinaSize / 2; i <= retinaSize / 2; i++)
+                for (int i = 0; i < retinaSize; i++)
                 {
-                    for (int j = -retinaSize / 2; j <= retinaSize / 2; j++)
+                    for (int j = 0; j < retinaSize; j++)
                     {
                         Cell px = world.cells[nextX + i, nextY+ j];
 
                         for (int compo = 0; compo < 4; compo++)
                         {
-                            LEC_Color.reality[(retinaSize / 2 + i) * 4 + compo, retinaSize / 2 + j] = px.colorCode[compo];
+                            LEC_Color.reality[i* 4 + compo, j] = px.colorCode[compo];
                         }
 
                         //Other features
                         //LEC_Orientation.reality[retinaSize / 2 + i, retinaSize / 2 + j] = Math.Abs(px.orientation % 180.0) / 180.0;
-                        LEC_Orientation.reality[retinaSize / 2 + i, retinaSize / 2 + j] = px.orientation / 180.0;
-                        LEC_Shape.reality[retinaSize / 2 + i, retinaSize / 2 + j] = px.shape / (double)shapeCount; //  !!! This encoding is bad because it defines intrinsic shape distance
+                        LEC_Orientation.reality[i, j] = px.orientation / 180.0;
+                        LEC_Shape.reality[i, j] = px.shape / (double)shapeCount; //  !!! This encoding is bad because it defines intrinsic shape distance
                     }
                 }
 
@@ -182,6 +156,9 @@ namespace VowelWorldModel
                 //Run a cycle on CA3
                 CA3.Converge();
                 CA3.Diverge();
+
+                //TO REMOVE
+                (CA3 as MMNodeMWSOM).HandleEpoch(steps, trainSteps, null, 0);
 
                 log(logFile, steps);
                 if (checkBoxEgosphere.Checked)
@@ -208,23 +185,21 @@ namespace VowelWorldModel
             CA3.learningLocked = true;
 
             //2-- Use a never encountered equidistant color (i.e (0 0 0 0) )
-            for (int i = -retinaSize / 2; i <= retinaSize / 2; i++)
-                for (int j = -retinaSize / 2; j <= retinaSize / 2; j++)
+            for (int i = 0; i < retinaSize ; i++)
+                for (int j = 0; j < retinaSize; j++)
                     for (int compo = 0; compo < 4; compo++)
-                        LEC_Color.reality[(retinaSize / 2 + i) * 4 + compo, retinaSize / 2 + j] = 0.0;
+                        LEC_Color.reality[i* 4 + compo, j] = 0.0;
 
             //Test with different orientations
             for (double orientation = 0; orientation <= 1.0; orientation+=0.025)
             {
-                for (int i = -retinaSize / 2; i <= retinaSize / 2; i++)
-                    for (int j = -retinaSize / 2; j <= retinaSize / 2; j++)
-                        LEC_Orientation.reality[retinaSize / 2 + i, retinaSize / 2 + j] = orientation;
+                for (int i = 0; i < retinaSize; i++)
+                    for (int j = 0; j < retinaSize; j++)
+                        LEC_Orientation.reality[i, j] = orientation;
 
                 CA3.Converge();
                 CA3.Diverge();
                 log(logFile, -1);
-
-
             }
 
             predictEgosphere();
@@ -250,7 +225,7 @@ namespace VowelWorldModel
                 for (int y = 0; y < world.Height; y++)
                 {
                     predictedWorld.cells[x, y] = new Cell();
-                    if (x >= retinaSize / 2 && x < world.Width - retinaSize / 2 && y >= retinaSize / 2 && y < world.Height - retinaSize / 2)
+                    //if (x >= retinaSize / 2 && x < world.Width - retinaSize / 2 && y >= retinaSize / 2 && y < world.Height - retinaSize / 2)
                     {
                         MEC.reality[0, 0] = x / (double)world.Width; //We want in range [0,1]
                         MEC.reality[1, 0] = y / (double)world.Height; //We want in range [0,1]
@@ -383,7 +358,7 @@ namespace VowelWorldModel
             {
                 pictureBoxWorldColor.Image = worldVisu["color"].Clone() as Bitmap;
                 using (Graphics g = Graphics.FromImage(pictureBoxWorldColor.Image))
-                    g.DrawRectangle(new Pen(Color.Black, 2), x - retinaSize / 2, y - retinaSize / 2, retinaSize, retinaSize);
+                    g.DrawRectangle(new Pen(Color.Black, 2), x, y, retinaSize, retinaSize);
                 pictureBoxWorldColor.Refresh();
             }
         }

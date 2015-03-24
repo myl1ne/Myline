@@ -37,5 +37,16 @@ namespace CDZNET.Core
             ArrayHelper.ForEach(reality, true, (x, y) => { error[x, y] -= prediction[x, y];});
             return error;
         }
+
+        /// <summary>
+        /// Compute the mean squarred error
+        /// </summary>
+        /// <returns>The error signal</returns>
+        public double ComputeMeanSquarredError()
+        {
+            double error = 0.0;
+            ArrayHelper.ForEach(reality, false, (x, y) => { error += Math.Pow(reality[x,y] - prediction[x, y], 2.0); });
+            return error;
+        }
     }
 }
