@@ -68,34 +68,52 @@ namespace VowelWorldModel
         {
             get
             {
-                double[] code = new double[2];
-                //0 = [0,0]
-                if (orientation < 45.0)
-                {
-                    code[0] = 0.0;
-                    code[1] = orientation / 45.0;
-                    //45 = [0,1]
-                }
-                else if (orientation < 90.0)
-                {
-                    code[0] = (orientation - 45) / (90.0 - 45.0);
-                    code[1] = 1.0;
-                    //90 = [1,1]
-                }
-                else if (orientation < 135.0)
-                {
-                    code[0] = 1.0; ;
-                    code[1] = 1.0 - (orientation - 90.0) / (135.0 - 90.0);
-                    //135 = [1,0]
-                }
-                else
-                {
-                    code[0] = 1.0 - (orientation - 135.0) / (180.0-135.0);
-                    code[1] = 0.0;
-                    //180 = [0,0]
-                }
-                return code;
+                return getOrientationCode(orientation);
             }
         }
+        public static double[] getOrientationCode(double value)
+        {
+            double[] code = new double[2];
+            //0 = [0,0]
+            if (value < 45.0)
+            {
+                code[0] = 0.0;
+                code[1] = value / 45.0;
+                //45 = [0,1]
+            }
+            else if (value < 90.0)
+            {
+                code[0] = (value - 45) / (90.0 - 45.0);
+                code[1] = 1.0;
+                //90 = [1,1]
+            }
+            else if (value < 135.0)
+            {
+                code[0] = 1.0;
+                code[1] = 1.0 - (value - 90.0) / (135.0 - 90.0);
+                //135 = [1,0]
+            }
+            else
+            {
+                code[0] = 1.0 - (value - 135.0) / (180.0 - 135.0);
+                code[1] = 0.0;
+                //180 = [0,0]
+            }
+            return code;
+        }
+        public static double getOrientationFromCode(double[] code)
+        {
+            double value;
+            if (code[0]<=code[1]) //<90
+            {
+                value = code[0] * 45.0 + code[1] * 45;
+            }
+            else
+            {
+                value = 90.0 + (1-code[0]) * 45.0 + (1-code[1]) * 45;
+            }
+            return value;
+        }
+
     }
 }

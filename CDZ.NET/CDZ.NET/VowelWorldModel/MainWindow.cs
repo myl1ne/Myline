@@ -18,7 +18,7 @@ namespace VowelWorldModel
     public partial class MainWindow : Form
     {
         //Parameters
-        MNNodeFactory.Model modelUsed = MNNodeFactory.Model.MWSOM;
+        MNNodeFactory.Model modelUsed = MNNodeFactory.Model.LUT;
         int retinaSize = 1;
         int shapeCount = 4;
         int worldWidth = 20;
@@ -54,7 +54,7 @@ namespace VowelWorldModel
             //Generate the network
             //1-Inputs
             LEC_Color = new CDZNET.Core.Signal(retinaSize*4, retinaSize); //Visual matrix (RED=0001 / BLUE=0010 / GREEN=0100 / YELLOW=1000)
-            LEC_Orientation = new CDZNET.Core.Signal(retinaSize, retinaSize); //Visual matrix
+            LEC_Orientation = new CDZNET.Core.Signal(retinaSize*2, retinaSize); //Visual matrix (an orientation is encoded on 2 bits)
             LEC_Shape = new CDZNET.Core.Signal(retinaSize, retinaSize); //Visual matrix
             MEC = new CDZNET.Core.Signal(2, 1); //Proprioception/Grid Cells
 
@@ -147,7 +147,10 @@ namespace VowelWorldModel
 
                         //Other features
                         //LEC_Orientation.reality[retinaSize / 2 + i, retinaSize / 2 + j] = Math.Abs(px.orientation % 180.0) / 180.0;
-                        LEC_Orientation.reality[i, j] = px.orientation / 180.0;
+                        double[] orientationCode = px.orientationCode;
+                        LEC_Orientation.reality[i*2 + 0, j] = orientationCode[0];
+                        LEC_Orientation.reality[i*2 + 1, j] = orientationCode[1];
+
                         LEC_Shape.reality[i, j] = px.shape / (double)shapeCount; //  !!! This encoding is bad because it defines intrinsic shape distance
                     }
                 }
@@ -158,7 +161,8 @@ namespace VowelWorldModel
                 CA3.Diverge();
 
                 //TO REMOVE
-                (CA3 as MMNodeMWSOM).HandleEpoch(steps, trainSteps, null, 0);
+                if (CA3 is MMNodeMWSOM)
+                    (CA3 as MMNodeMWSOM).HandleEpoch(steps, trainSteps, null, 0);
 
                 log(logFile, steps);
                 if (checkBoxEgosphere.Checked)
@@ -194,8 +198,14 @@ namespace VowelWorldModel
             for (double orientation = 0; orientation <= 1.0; orientation+=0.025)
             {
                 for (int i = 0; i < retinaSize; i++)
+                {
                     for (int j = 0; j < retinaSize; j++)
-                        LEC_Orientation.reality[i, j] = orientation;
+                    {
+                        double[] orientationCode = Cell.getOrientationCode(orientation * 180.0);
+                        LEC_Orientation.reality[i * 2 + 0, j] = orientationCode[0];
+                        LEC_Orientation.reality[i * 2 + 1, j] = orientationCode[1];
+                    }
+                }
 
                 CA3.Converge();
                 CA3.Diverge();
@@ -232,9 +242,17 @@ namespace VowelWorldModel
                         Dictionary<Signal, double[,]> prediction = CA3.Predict(new List<Signal> { MEC });
 
                         //We use only the center as the prediction
-                        predictedWorld.cells[x, y].orientation = prediction[LEC_Orientation][retinaSize / 2, retinaSize / 2] * 180.0;
+
+                        double[] orientationCode = new double[2]
+                        {
+                            prediction[LEC_Orientation][(retinaSize / 2)*2, retinaSize / 2],
+                            prediction[LEC_Orientation][(retinaSize / 2)*2 +1, retinaSize / 2] 
+                        };
+
+                        predictedWorld.cells[x, y].orientation = Cell.getOrientationFromCode(orientationCode);
+
                         for (int compo = 0; compo < 4; compo++)
-                            predictedWorld.cells[x, y].colorCode[compo] = prediction[LEC_Color][retinaSize / 2 + compo, retinaSize / 2];
+                            predictedWorld.cells[x, y].colorCode[compo] = prediction[LEC_Color][ (retinaSize / 2) * 4 + compo, retinaSize / 2];
 
                         //predictedWorld.cells[x, y].frequency
                         progressBarCurrentOp.PerformStep();
@@ -277,11 +295,11 @@ namespace VowelWorldModel
         {
             logFile.Write("t,");
             logFile.Write(getMatrixHeadingS("realColor", retinaSize, retinaSize, 4));
-            logFile.Write(getMatrixHeadingS("realOrientation", retinaSize, retinaSize, 1));
+            logFile.Write(getMatrixHeadingS("realOrientation", retinaSize, retinaSize, 2));
             logFile.Write(getMatrixHeadingS("fullPColor", retinaSize, retinaSize,4));
-            logFile.Write(getMatrixHeadingS("fullPOrientation", retinaSize, retinaSize, 1));
+            logFile.Write(getMatrixHeadingS("fullPOrientation", retinaSize, retinaSize, 2));
             logFile.Write(getMatrixHeadingS("partialPColor", retinaSize, retinaSize, 4));
-            logFile.Write(getMatrixHeadingS("partialPOrientation", retinaSize, retinaSize, 1));
+            logFile.Write(getMatrixHeadingS("partialPOrientation", retinaSize, retinaSize, 2));
             logFile.WriteLine();
             //logFile.WriteLine("t,realColor0,realColor1,realColor2,realColor3,realOrientation, predColor0,predColor1,predColor2,predColor3, predOrientation,orientation->color0,orientation->color1,orientation->color2,orientation->color3, color->orientation");
         }

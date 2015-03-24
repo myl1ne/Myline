@@ -27,7 +27,7 @@ namespace VowelWorldModel
         int worldHeight = 250;
         int seedsNumber = 3;
         int trainSteps = 10000;
-        int saccadeMaximumRange = 1;
+        int saccadeSize = 1;
         double orientationVariability = 0.0; //degrees
         World world;
         Dictionary<string, Bitmap> worldVisu;
@@ -58,7 +58,12 @@ namespace VowelWorldModel
             LEC_ColorT0 = new CDZNET.Core.Signal(retinaSize*4, retinaSize); //Visual matrix (RED=0001 / BLUE=0010 / GREEN=0100 / YELLOW=1000)          
             LEC_ColorT1 = new CDZNET.Core.Signal(retinaSize*4, retinaSize); //Visual matrix (RED=0001 / BLUE=0010 / GREEN=0100 / YELLOW=1000)
 
-            MEC = new CDZNET.Core.Signal(2, 1); //dX dY
+            MEC = new CDZNET.Core.Signal(4, 1); 
+            //dX dY 
+            //Right = 0 1 0 0
+            //Left  = 1 0 0 0
+            //Up    = 0 0 0 1
+            //Down  = 0 0 1 0
 
             //2-Areas 
             CA3 = MNNodeFactory.obtain(modelUsed);
@@ -119,8 +124,8 @@ namespace VowelWorldModel
             int endY = -1; int dY = 0;
             while (endX < 0 || endY < 0 || endX >= world.Width - retinaSize || endY >= world.Width - retinaSize)
             {
-                dX = rnd.Next(-saccadeMaximumRange, saccadeMaximumRange+1);
-                dY = rnd.Next(-saccadeMaximumRange, saccadeMaximumRange+1);
+                dX = rnd.Next(-saccadeSize, saccadeSize + 1);
+                dY = rnd.Next(-saccadeSize, saccadeSize + 1);
                 endX = startX + dX;
                 endY = startY + dY;
             }
@@ -128,8 +133,43 @@ namespace VowelWorldModel
             //-----------------
             //Get the perceptive information
             //1-Proprioception
-            MEC.reality[0, 0] = (dX + saccadeMaximumRange) / (2.0 * saccadeMaximumRange); //We want in range [0,1]
-            MEC.reality[1, 0] = (dY + saccadeMaximumRange) / (2.0 * saccadeMaximumRange); //We want in range [0,1]
+            //dX dY 
+            //Right = 0 1 0 0
+            //Left  = 1 0 0 0
+            //Up    = 0 0 0 1
+            //Down  = 0 0 1 0
+            if (dX == -saccadeSize)
+            {
+                MEC.reality[0, 0] = 1;
+                MEC.reality[1, 0] = 0;
+            }
+            else if (dX == saccadeSize)
+            {
+                MEC.reality[0, 0] = 0;
+                MEC.reality[1, 0] = 1;
+            }
+            else
+            {
+                MEC.reality[0, 0] = 0;
+                MEC.reality[1, 0] = 0;
+            }
+
+
+            if (dY == -saccadeSize)
+            {
+                MEC.reality[2, 0] = 1;
+                MEC.reality[3, 0] = 0;
+            }
+            else if (dY == saccadeSize)
+            {
+                MEC.reality[2, 0] = 0;
+                MEC.reality[3, 0] = 1;
+            }
+            else
+            {
+                MEC.reality[2, 0] = 0;
+                MEC.reality[3, 0] = 0;
+            }
 
             //2-Vision
             for (int i = 0; i < retinaSize; i++)
@@ -196,7 +236,7 @@ namespace VowelWorldModel
             logFile.Write("world,");
             logFile.Write(getMatrixHeadingS("realColorT0", retinaSize, retinaSize, 4));
             logFile.Write(getMatrixHeadingS("realColorT1", retinaSize, retinaSize, 4));
-            logFile.Write(getMatrixHeadingS("realSaccade", 1, 1, 2));
+            logFile.Write(getMatrixHeadingS("realSaccade", 1, 1, 4));
             logFile.Write(getMatrixHeadingS("c0sacc->c1", retinaSize, retinaSize, 4));
             logFile.Write(getMatrixHeadingS("ERRORc0sacc->c1", retinaSize, retinaSize, 4));
             logFile.Write("ERRORleft,");
