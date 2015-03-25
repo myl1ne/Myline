@@ -10,7 +10,7 @@ namespace VowelWorldModel
 {
     static class MNNodeFactory
     {
-        public enum Model { SOM, LUT, Matlab, MWSOM };
+        public enum Model { SOM, LUT, Matlab, MWSOM, DeepBelief };
         public static MMNode obtain(Model mdl)
         {
             MMNode node = null;
@@ -39,6 +39,10 @@ namespace VowelWorldModel
 
                 case Model.MWSOM:
                     node = new CDZNET.Core.MMNodeMWSOM(new CDZNET.Point2D(30, 20));
+                    break;
+
+                case Model.DeepBelief:
+                    node = new CDZNET.Core.MMNodeDeepBeliefNetwork(new CDZNET.Point2D(30, 20), new int[]{10});
                     break;
 
                 default:

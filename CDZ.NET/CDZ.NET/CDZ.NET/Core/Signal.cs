@@ -46,7 +46,7 @@ namespace CDZNET.Core
         {
             double error = 0.0;
             ArrayHelper.ForEach(reality, false, (x, y) => { error += Math.Pow(reality[x,y] - prediction[x, y], 2.0); });
-            return error;
+            return Math.Sqrt(error) / (Width * Height);
         }
     }
 }

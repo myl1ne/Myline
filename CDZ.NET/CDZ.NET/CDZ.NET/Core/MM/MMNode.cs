@@ -137,7 +137,7 @@ namespace CDZNET.Core
         }
 
 
-        public void Epoch(List<Dictionary<Signal, double[,]> > trainingSet, out Dictionary<Signal, double> modalitiesMeanSquarredError, out double globalMeanSquarred)
+        public virtual void Epoch(List<Dictionary<Signal, double[,]> > trainingSet, out Dictionary<Signal, double> modalitiesMeanSquarredError, out double globalMeanSquarred)
         {
             modalitiesMeanSquarredError = new Dictionary<Signal, double>();     
             foreach(Signal s in modalities)
@@ -192,5 +192,28 @@ namespace CDZNET.Core
             return i;
         }
 
+        /// <summary>
+        /// Run a batch (i.e a given number of epochs or min MSE reached)
+        /// </summary>
+        /// <param name="trainingSet">The training set to be used (can include more modalities than the one of the network. Only the relevant one will be used)</param>
+        /// <param name="maximumEpochs">The maximum number of epochs to run</param>
+        /// <param name="stopCritMSE">An optional MSE criterium for stopping</param>
+        /// <returns>The number of epoch ran when the batch stopped</returns>
+        public int Batch(List<Dictionary<string, double[,]>> trainingSet, int maximumEpochs, double stopCritMSE = 0.0)
+        {
+            //Convert the training set to use Signal instead of strings
+            List<Dictionary<Signal, double[,]>> trainingSetConverted = new List<Dictionary<Signal, double[,]>>();
+            for (int i = 0; i < trainingSet.Count; i++)
+            {
+                Dictionary<Signal, double[,]> record = new Dictionary<Signal,double[,]>();
+                foreach (Signal s in modalities)
+                {
+                    record[s] = trainingSet[i][labelsModalities[s]];
+                }
+                trainingSetConverted.Add(record);
+            }
+
+            return Batch(trainingSetConverted, maximumEpochs, stopCritMSE);
+        }
     }
 }

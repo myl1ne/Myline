@@ -315,7 +315,6 @@ namespace CDZNET.Core
                     //Train the afferent connections
                     if (mu > 0.0)
                     {
-                        //MyModif
                         double norm = 0.0;
                         foreach (Connection c in map[x, y].inputs["afferent"])
                         {

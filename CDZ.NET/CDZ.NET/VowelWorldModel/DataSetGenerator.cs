@@ -13,6 +13,7 @@ using System.IO;
 using CDZNET;
 using CDZNET.Core;
 using CDZNET.GUI;
+using System.Diagnostics;
 
 namespace VowelWorldModel
 {
@@ -25,16 +26,18 @@ namespace VowelWorldModel
         int worldWidth = 250;
         int worldHeight = 250;
         int seedsNumber = 3;
-        int trainSteps = 10000;
         int saccadeSize = 1;
         double orientationVariability = 0.0; //degrees
         World world;
         Dictionary<string, Bitmap> worldVisu;
 
+        List<Dictionary<string, double[,]>> trainSet;
+        List<Dictionary<string, double[,]>> testSet;
 
         public DatasetGenerator()
         {
             InitializeComponent();
+            listBoxAlgo.DataSource = Enum.GetValues(typeof(MNNodeFactory.Model));
 
             //Generate the world
             world = new World(worldWidth, worldHeight, shapeCount, orientationVariability);
@@ -213,16 +216,19 @@ namespace VowelWorldModel
         private void buttonGenerate_Click(object sender, EventArgs e)
         {
             //Reset progress bar
+            int totalSamples = Convert.ToInt16(numericUpDownSamples.Value);
             progressBarCurrentOp.Minimum = 0;
-            progressBarCurrentOp.Maximum = 2*trainSteps;
+            progressBarCurrentOp.Maximum = 2*totalSamples;
             progressBarCurrentOp.Step = 1;
             progressBarCurrentOp.Value = 0;
 
             //Generate the dataset
-            List<Dictionary<string, double[,]>> dataSet = new List<Dictionary<string, double[,]>>();
-            for (int step = 0; step < trainSteps; step++)
+            trainSet = new List<Dictionary<string, double[,]>>();
+            testSet = new List<Dictionary<string, double[,]>>();
+            for (int step = 0; step < totalSamples; step++)
             {
-                dataSet.Add(getRecord());
+                trainSet.Add(getRecord());
+                testSet.Add(getRecord());
                 progressBarCurrentOp.PerformStep();
             }
 
@@ -251,24 +257,64 @@ namespace VowelWorldModel
             file.WriteLine();
 
             //Write the actual data
-            for (int step = 0; step < trainSteps; step++)
+            for (int step = 0; step < totalSamples; step++)
             {
                 file.WriteLine(
-                    GetString(dataSet[step]["XY-t0"]) + "," +
-                    GetString(dataSet[step]["XY-t1"]) + "," +
-                    GetString(dataSet[step]["Vision-t0-Color"]) + "," +
-                    GetString(dataSet[step]["Vision-t0-Orientation"]) + "," +
-                    GetString(dataSet[step]["Vision-t0-Shape"]) + "," +
-                    GetString(dataSet[step]["Saccade"]) + "," +
-                    GetString(dataSet[step]["Vision-t1-Color"]) + "," +
-                    GetString(dataSet[step]["Vision-t1-Orientation"]) + "," +
-                    GetString(dataSet[step]["Vision-t1-Shape"])
+                    GetString(trainSet[step]["XY-t0"]) + "," +
+                    GetString(trainSet[step]["XY-t1"]) + "," +
+                    GetString(trainSet[step]["Vision-t0-Color"]) + "," +
+                    GetString(trainSet[step]["Vision-t0-Orientation"]) + "," +
+                    GetString(trainSet[step]["Vision-t0-Shape"]) + "," +
+                    GetString(trainSet[step]["Saccade"]) + "," +
+                    GetString(trainSet[step]["Vision-t1-Color"]) + "," +
+                    GetString(trainSet[step]["Vision-t1-Orientation"]) + "," +
+                    GetString(trainSet[step]["Vision-t1-Shape"])
                     );
 
                 progressBarCurrentOp.PerformStep();
             }
             file.Close();
-            MessageBox.Show("Dataset generated : " + trainSteps + " records");
+            MessageBox.Show("Dataset generated : " + totalSamples + " records");
+            buttonTrain.Enabled = true;
+            buttonTest.Enabled = true;
+        }
+
+        private void buttonTrain_Click(object sender, EventArgs e)
+        {
+            //Reset progress bar
+            int MAXIMUM_EPOCH = 5000;
+            progressBarCurrentOp.Minimum = 0;
+            progressBarCurrentOp.Maximum = MAXIMUM_EPOCH;
+            progressBarCurrentOp.Step = 1;
+            progressBarCurrentOp.Value = 0;
+
+            MNNodeFactory.Model selectedModel;
+            Enum.TryParse<MNNodeFactory.Model>(listBoxAlgo.SelectedItem.ToString(), out selectedModel);
+            MMNode network = MNNodeFactory.obtain(selectedModel);
+
+            network.onEpoch += network_onEpoch;
+            //network.addModality( new Signal(2,1), "XY-t0");
+            //network.addModality( new Signal(2,1), "XY-t1");
+            network.addModality(new Signal(retinaSize * 4, retinaSize), "Vision-t0-Color");
+            network.addModality(new Signal(retinaSize * 2, retinaSize), "Vision-t0-Orientation");
+            network.addModality(new Signal(retinaSize * 4, retinaSize), "Vision-t0-Shape");
+            network.addModality(new Signal(4, 1), "Saccade");
+            network.addModality(new Signal(retinaSize * 4, retinaSize), "Vision-t1-Color");
+            network.addModality(new Signal(retinaSize * 2, retinaSize), "Vision-t1-Orientation");
+            network.addModality(new Signal(retinaSize * 4, retinaSize), "Vision-t1-Shape");
+
+            Stopwatch watch = new Stopwatch();
+            watch.Start();
+            int iterations = network.Batch(trainSet, MAXIMUM_EPOCH, 0.01);
+            watch.Stop();
+            MessageBox.Show("Batch trained operated in " + watch.Elapsed + " over " + iterations + " iterations.");
+        }
+
+        void network_onEpoch(int currentEpoch, int maximumEpoch, Dictionary<Signal, double> modalitiesMSE, double MSE)
+        {
+            progressBarCurrentOp.PerformStep();
+            labelError.Text = MSE.ToString();
+            labelError.Refresh();
         }
     }
 }

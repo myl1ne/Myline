@@ -18,7 +18,7 @@ namespace VowelWorldModel
     public partial class MainWindow : Form
     {
         //Parameters
-        MNNodeFactory.Model modelUsed = MNNodeFactory.Model.LUT;
+        MNNodeFactory.Model modelUsed = MNNodeFactory.Model.DeepBelief;
         int retinaSize = 1;
         int shapeCount = 4;
         int worldWidth = 20;

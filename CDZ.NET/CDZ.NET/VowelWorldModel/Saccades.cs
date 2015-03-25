@@ -20,7 +20,7 @@ namespace VowelWorldModel
     {
         Random rnd = new Random();
         //Parameters
-        MNNodeFactory.Model modelUsed = MNNodeFactory.Model.MWSOM;
+        MNNodeFactory.Model modelUsed = MNNodeFactory.Model.DeepBelief;
         int retinaSize = 3;
         int shapeCount = 4;
         int worldWidth = 250;
