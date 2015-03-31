@@ -14,12 +14,16 @@ using CDZNET;
 using CDZNET.Core;
 using CDZNET.GUI;
 using System.Diagnostics;
+using CDZNET.Helpers;
 
 namespace VowelWorldModel
 {
     public partial class DatasetGenerator : Form
     {
         Random rnd = new Random();
+
+        bool EXTENSIVE_LOG = false;
+
         //Parameters
         int retinaSize = 3;
         int shapeCount = 4;
@@ -31,122 +35,15 @@ namespace VowelWorldModel
         World world;
         Dictionary<string, Bitmap> worldVisu;
 
-        List<Dictionary<string, double[,]>> trainSet;
-        List<Dictionary<string, double[,]>> testSet;
-
         public DatasetGenerator()
         {
             InitializeComponent();
-            listBoxAlgo.DataSource = Enum.GetValues(typeof(MNNodeFactory.Model));
+            listBoxAlgo.DataSource = Enum.GetValues(typeof(MMNodeFactory.Model));
 
             //Generate the world
             world = new World(worldWidth, worldHeight, shapeCount, orientationVariability);
             world.Randomize(seedsNumber);
             getWorldVisualization();
-        }
-
-        Dictionary<string, double[,]> getRecord()
-        {
-            Dictionary<string, double[,]> record = new Dictionary<string, double[,]>();
-
-            //-----------------
-            //Fixate somewhere
-            int startX = rnd.Next(0, world.Width - retinaSize);
-            int startY = rnd.Next(0, world.Height - retinaSize);
-
-            //-----------------
-            //Saccade
-            int endX = -1; int dX = 0;
-            int endY = -1; int dY = 0;
-            while (endX < 0 || endY < 0 || endX >= world.Width - retinaSize || endY >= world.Width - retinaSize)
-            {
-                dX = rnd.Next(-saccadeSize, saccadeSize + 1);
-                dY = rnd.Next(-saccadeSize, saccadeSize + 1);
-                endX = startX + dX;
-                endY = startY + dY;
-            }
-
-            //-----------------
-            //Get the perceptive information
-            //1-Proprioception
-            //dX dY 
-            //Right = 0 1 0 0
-            //Left  = 1 0 0 0
-            //Up    = 0 0 0 1
-            //Down  = 0 0 1 0
-            record["Saccade"] = new double[4, 1];
-            if (dX == -saccadeSize)
-            {
-                record["Saccade"][0, 0] = 1;
-                record["Saccade"][1, 0] = 0;
-            }
-            else if (dX == saccadeSize)
-            {
-                record["Saccade"][0, 0] = 0;
-                record["Saccade"][1, 0] = 1;
-            }
-            else
-            {
-                record["Saccade"][0, 0] = 0;
-                record["Saccade"][1, 0] = 0;
-            }
-
-
-            if (dY == -saccadeSize)
-            {
-                record["Saccade"][2, 0] = 1;
-                record["Saccade"][3, 0] = 0;
-            }
-            else if (dY == saccadeSize)
-            {
-                record["Saccade"][2, 0] = 0;
-                record["Saccade"][3, 0] = 1;
-            }
-            else
-            {
-                record["Saccade"][2, 0] = 0;
-                record["Saccade"][3, 0] = 0;
-            }
-
-            //2-Vision
-            record["XY-t0"] = new double[2, 1] { {startX}, {startY} };
-            record["Vision-t0-Color"] = new double[retinaSize * 4, retinaSize];
-            record["Vision-t0-Orientation"] = new double[retinaSize * 2, retinaSize];
-            record["Vision-t0-Shape"] = new double[retinaSize * 4, retinaSize];
-            record["XY-t1"] = new double[2, 1] { { endX }, { endY } };
-            record["Vision-t1-Color"] = new double[retinaSize * 4, retinaSize];
-            record["Vision-t1-Orientation"] = new double[retinaSize * 2, retinaSize];
-            record["Vision-t1-Shape"] = new double[retinaSize * 4, retinaSize];
-            for (int i = 0; i < retinaSize; i++)
-            {
-                for (int j = 0; j < retinaSize; j++)
-                {
-                    Cell startPx = world.cells[startX + i, startY + j];
-                    Cell endPx = world.cells[endX + i, endY + j];
-
-                    //Color (4 compo)
-                    for (int compo = 0; compo < 4; compo++)
-                    {
-                        record["Vision-t0-Color"][i * 4 + compo, j] = startPx.colorCode[compo];
-                        record["Vision-t1-Color"][i * 4 + compo, j] = endPx.colorCode[compo];
-                    }
-
-                    //Orientation (2 compo)
-                    for (int compo = 0; compo < 2; compo++)
-                    {
-                        record["Vision-t0-Orientation"][i * 2 + compo, j] = startPx.orientationCode[compo];
-                        record["Vision-t1-Orientation"][i * 2 + compo, j] = endPx.orientationCode[compo];
-                    }
-
-                    //Shape (4 compo)
-                    for (int compo = 0; compo < 4; compo++)
-                    {
-                        record["Vision-t0-Shape"][i * 4 + compo, j] = (compo == startPx.shape) ? 1 : 0;
-                        record["Vision-t1-Shape"][i * 4 + compo, j] = (compo == endPx.shape) ? 1 : 0;
-                    }
-                }
-            }
-            return record;
         }
 
         //---------------------LOG------------------
@@ -215,23 +112,53 @@ namespace VowelWorldModel
 
         private void buttonGenerate_Click(object sender, EventArgs e)
         {
-            //Reset progress bar
-            int totalSamples = Convert.ToInt16(numericUpDownSamples.Value);
-            progressBarCurrentOp.Minimum = 0;
-            progressBarCurrentOp.Maximum = 2*totalSamples;
-            progressBarCurrentOp.Step = 1;
-            progressBarCurrentOp.Value = 0;
+            //MessageBox.Show("Dataset generated : " + totalSamples + " records");
+            //buttonTrain.Enabled = true;
+            //buttonTest.Enabled = true;
+        }
 
-            //Generate the dataset
-            trainSet = new List<Dictionary<string, double[,]>>();
-            testSet = new List<Dictionary<string, double[,]>>();
-            for (int step = 0; step < totalSamples; step++)
+        private void buttonTrain_Click(object sender, EventArgs e)
+        {
+            //Generate the sets
+            int sampleCount = 2000;
+            Dictionary<string, List<Dictionary<string, double[,]>>> setsToEvaluate = world.generateSaccadeDatasets(sampleCount, retinaSize, saccadeSize);
+
+            //Choose the models to test
+            List<MMNodeFactory.Model> modelsToTest = new List<MMNodeFactory.Model>()
             {
-                trainSet.Add(getRecord());
-                testSet.Add(getRecord());
-                progressBarCurrentOp.PerformStep();
-            }
+                //MMNodeFactory.Model.DeepBelief,
+                //MNNodeFactory.Model.LUT,
+                //MMNodeFactory.Model.AFSOM,
+                //MNNodeFactory.Model.SOM,
+                ////MNNodeFactory.Model.MWSOM,
+                MMNodeFactory.Model.MLP
+            };
 
+            //Vary the size of the trainingset
+            for (int itemToTrainOn = 0; itemToTrainOn <= setsToEvaluate["train"].Count; itemToTrainOn += (itemToTrainOn>100)?200:20)
+            {   
+                //Create
+                Dictionary<string, MMNode> models = createModels(modelsToTest);
+
+                //Train
+                setsToEvaluate["usedForTraining"] = setsToEvaluate["train"].GetRange(0, itemToTrainOn);
+                trainModels(models, setsToEvaluate["usedForTraining"]);
+
+                //Test
+                evaluateOnSets(models, setsToEvaluate, "testLog_"+ textBoxFileName.Text);
+            }
+            MessageBox.Show("Done !");
+        }
+
+        void network_onEpoch(int currentEpoch, int maximumEpoch, Dictionary<Signal, double> modalitiesMSE, double MSE)
+        {
+            progressBarCurrentOp.PerformStep();
+            labelError.Text = MSE.ToString();
+            labelError.Refresh();
+        }
+
+        void dumpDatasetToFile(List<Dictionary<string, double[,]>> dataset, string fileName)
+        {
             //Dump it into a file
             StreamWriter file = new StreamWriter(textBoxFileName.Text);
 
@@ -257,64 +184,304 @@ namespace VowelWorldModel
             file.WriteLine();
 
             //Write the actual data
-            for (int step = 0; step < totalSamples; step++)
+            for (int step = 0; step < dataset.Count; step++)
             {
                 file.WriteLine(
-                    GetString(trainSet[step]["XY-t0"]) + "," +
-                    GetString(trainSet[step]["XY-t1"]) + "," +
-                    GetString(trainSet[step]["Vision-t0-Color"]) + "," +
-                    GetString(trainSet[step]["Vision-t0-Orientation"]) + "," +
-                    GetString(trainSet[step]["Vision-t0-Shape"]) + "," +
-                    GetString(trainSet[step]["Saccade"]) + "," +
-                    GetString(trainSet[step]["Vision-t1-Color"]) + "," +
-                    GetString(trainSet[step]["Vision-t1-Orientation"]) + "," +
-                    GetString(trainSet[step]["Vision-t1-Shape"])
+                    GetString(dataset[step]["XY-t0"]) + "," +
+                    GetString(dataset[step]["XY-t1"]) + "," +
+                    GetString(dataset[step]["Vision-t0-Color"]) + "," +
+                    GetString(dataset[step]["Vision-t0-Orientation"]) + "," +
+                    GetString(dataset[step]["Vision-t0-Shape"]) + "," +
+                    GetString(dataset[step]["Saccade"]) + "," +
+                    GetString(dataset[step]["Vision-t1-Color"]) + "," +
+                    GetString(dataset[step]["Vision-t1-Orientation"]) + "," +
+                    GetString(dataset[step]["Vision-t1-Shape"])
                     );
 
                 progressBarCurrentOp.PerformStep();
             }
             file.Close();
-            MessageBox.Show("Dataset generated : " + totalSamples + " records");
-            buttonTrain.Enabled = true;
-            buttonTest.Enabled = true;
         }
 
-        private void buttonTrain_Click(object sender, EventArgs e)
+        Dictionary<string, MMNode> createModels(List<MMNodeFactory.Model> modelsToTrain)
         {
-            //Reset progress bar
-            int MAXIMUM_EPOCH = 5000;
-            progressBarCurrentOp.Minimum = 0;
-            progressBarCurrentOp.Maximum = MAXIMUM_EPOCH;
-            progressBarCurrentOp.Step = 1;
-            progressBarCurrentOp.Value = 0;
+            Dictionary<string, MMNode> models = new Dictionary<string, MMNode>();
 
-            MNNodeFactory.Model selectedModel;
-            Enum.TryParse<MNNodeFactory.Model>(listBoxAlgo.SelectedItem.ToString(), out selectedModel);
-            MMNode network = MNNodeFactory.obtain(selectedModel);
+            foreach (MMNodeFactory.Model selectedModel in modelsToTrain)
+            {
+                //Create the model
+                //MNNodeFactory.Model selectedModel;
+                //Enum.TryParse<MNNodeFactory.Model>(uncastedMdl.ToString(), out selectedModel);
+                models[selectedModel.ToString()] = MMNodeFactory.obtain(selectedModel);
 
-            network.onEpoch += network_onEpoch;
-            //network.addModality( new Signal(2,1), "XY-t0");
-            //network.addModality( new Signal(2,1), "XY-t1");
-            network.addModality(new Signal(retinaSize * 4, retinaSize), "Vision-t0-Color");
-            network.addModality(new Signal(retinaSize * 2, retinaSize), "Vision-t0-Orientation");
-            network.addModality(new Signal(retinaSize * 4, retinaSize), "Vision-t0-Shape");
-            network.addModality(new Signal(4, 1), "Saccade");
-            network.addModality(new Signal(retinaSize * 4, retinaSize), "Vision-t1-Color");
-            network.addModality(new Signal(retinaSize * 2, retinaSize), "Vision-t1-Orientation");
-            network.addModality(new Signal(retinaSize * 4, retinaSize), "Vision-t1-Shape");
+                MMNode network = models[selectedModel.ToString()];
+                network.onEpoch += network_onEpoch;
+                //network.addModality( new Signal(2,1), "XY-t0");
+                //network.addModality( new Signal(2,1), "XY-t1");
+                network.addModality(new Signal(retinaSize * 4, retinaSize), "Vision-t0-Color");
+                network.addModality(new Signal(retinaSize * 2, retinaSize), "Vision-t0-Orientation");
+                //network.addModality(new Signal(retinaSize * 4, retinaSize), "Vision-t0-Shape");
+                network.addModality(new Signal(4, 1), "Saccade");
+                network.addModality(new Signal(retinaSize * 4, retinaSize), "Vision-t1-Color");
+                network.addModality(new Signal(retinaSize * 2, retinaSize), "Vision-t1-Orientation");
+                //network.addModality(new Signal(retinaSize * 4, retinaSize), "Vision-t1-Shape");
 
-            Stopwatch watch = new Stopwatch();
-            watch.Start();
-            int iterations = network.Batch(trainSet, MAXIMUM_EPOCH, 0.01);
-            watch.Stop();
-            MessageBox.Show("Batch trained operated in " + watch.Elapsed + " over " + iterations + " iterations.");
+                //Apply a treshold function on the modalities
+                network.onDivergence += network_onDivergence;
+            }
+            return models;
         }
 
-        void network_onEpoch(int currentEpoch, int maximumEpoch, Dictionary<Signal, double> modalitiesMSE, double MSE)
+        /// <summary>
+        /// Apply a treshold function on the modalities after divergence
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        void network_onDivergence(object sender, EventArgs e)
         {
-            progressBarCurrentOp.PerformStep();
-            labelError.Text = MSE.ToString();
-            labelError.Refresh();
+            foreach(Signal s in (sender as MMNode).modalities)
+            {
+                ArrayHelper.ForEach(s.prediction, true, (x, y) =>
+                    {
+                        s.prediction[x, y] = (s.prediction[x, y] >= 0.5) ? 1.0 : 0.0;
+                    });
+            }
+        }
+
+        int countWrongPixels(string modalityName, double[,] truth, double[,] estimation)
+        {
+            int components = 4;
+            if (modalityName.Contains("Orientation"))
+                components = 2;
+            else if (modalityName.Contains("Color"))
+                components = 4;
+            else
+                throw new Exception("Trying to count some non visual stuff ?");
+
+            int error = 0;
+            for (int i = 0; i < retinaSize; i++)
+            {
+                for (int j = 0; j < retinaSize; j++)
+                {
+                    for (int comp = 0; comp < components; comp++)
+                    {
+                        if (truth[i*components,j] != estimation[i*components,j])
+                        {
+                            error++; break;
+                        }
+                    }
+                }
+            }
+            return error;
+        }
+
+        void trainModels(Dictionary<string, MMNode> modelsToTrain, List<Dictionary<string, double[,]>> trainingSet)
+        {
+            Console.WriteLine();
+            Console.WriteLine("---New training round ---");
+            foreach (KeyValuePair<string, MMNode> model in modelsToTrain)
+            {
+                Console.WriteLine(DateTime.Now + "\t" + "Start training " + model.Key + " on a set of size " + trainingSet.Count);
+
+                //Reset progress bar
+                int MAXIMUM_EPOCH = 5000;
+                progressBarCurrentOp.Minimum = 0;
+                progressBarCurrentOp.Maximum = MAXIMUM_EPOCH;
+                progressBarCurrentOp.Step = 1;
+                progressBarCurrentOp.Value = 0; ;
+
+                //Run a batch training
+                Stopwatch watch = new Stopwatch();
+                watch.Start();
+                int iterations = model.Value.Batch(trainingSet, MAXIMUM_EPOCH, 0.1);
+                watch.Stop();
+                Console.WriteLine(DateTime.Now + "\t" + "training operated in " + watch.Elapsed + " with iterations= " + iterations);
+            }
+        }
+
+        bool hasWrittenHeaders = false;
+        void evaluateOnSets(Dictionary<string, MMNode> models, Dictionary<string, List<Dictionary<string, double[,]>>> sets, string logFile)
+        {
+            Console.WriteLine(DateTime.Now + "\t" + "Starting to test log.");
+
+            //Dump it into a file
+            StreamWriter file = new StreamWriter(logFile, hasWrittenHeaders);
+
+            //Write some metadata
+            if (!hasWrittenHeaders)
+            {
+                file.WriteLine("worldWidth\t" + worldWidth);
+                file.WriteLine("worldHeight\t" + worldHeight);
+                file.WriteLine("seedsNumber\t" + seedsNumber);
+                file.WriteLine("orientationVariability\t" + orientationVariability);
+                file.WriteLine("retinaSize\t" + retinaSize);
+                file.WriteLine("saccadeSize\t" + saccadeSize);
+                file.WriteLine();
+
+                //write the headers
+                file.Write("Model,");
+                file.Write("SetName,");
+                file.Write("InvertedBits,");
+                file.Write("TrainingSetSize,");
+                file.Write("AllModSumError,");
+                if (EXTENSIVE_LOG)
+                {
+                    file.Write(getMatrixHeadingS("XY-t0", 1, 1, 2));
+                    file.Write(getMatrixHeadingS("XY-t1", 1, 1, 2));
+                    file.Write(getMatrixHeadingS("Vision-t0-Color", retinaSize, retinaSize, 4));
+                    file.Write(getMatrixHeadingS("Vision-t0-Orientation", retinaSize, retinaSize, 2));
+                    file.Write(getMatrixHeadingS("Vision-t0-Shape", retinaSize, retinaSize, 4));
+                    file.Write(getMatrixHeadingS("Saccade", 1, 1, 4));
+                    file.Write(getMatrixHeadingS("Vision-t1-Color", retinaSize, retinaSize, 4));
+                    file.Write(getMatrixHeadingS("Vision-t1-Orientation", retinaSize, retinaSize, 2));
+                    file.Write(getMatrixHeadingS("Vision-t1-Shape", retinaSize, retinaSize, 4));
+                }
+                foreach (Signal mod in models.First().Value.modalities)
+                {
+                    string modName = models.First().Value.labelsModalities[mod];
+                    file.Write(getMatrixHeadingS("corruption_" +modName , 1, 1, 1));
+                    if (EXTENSIVE_LOG)
+                    {
+                        file.Write(getMatrixHeadingS("reality_" + modName, 1, 1, mod.Width * mod.Height));
+                        file.Write(getMatrixHeadingS("prediction_" + modName, 1, 1, mod.Width * mod.Height));
+                    }
+                    file.Write(getMatrixHeadingS("originalMaxError_" + modName, 1, 1, 1));
+                    file.Write(getMatrixHeadingS("corruptedMaxError_" + modName, 1, 1, 1));
+                    file.Write(getMatrixHeadingS("originalSumError_" + modName, 1, 1, 1));
+                    file.Write(getMatrixHeadingS("corruptedSumError_" + modName, 1, 1, 1));
+                    if (modName.Contains("Vision"))
+                    {
+                        file.Write("wrongPixels_" + modName+",");
+                    }
+                }
+                file.WriteLine();
+                hasWrittenHeaders = true;
+            }
+
+            //Start the test
+            foreach (string modelName in models.Keys)
+            {
+                Console.Write("Testing" + modelName + " ...");
+                Stopwatch watch = new Stopwatch();
+                watch.Start();
+                MMNode network = models[modelName];
+
+                network.learningLocked = true;
+                foreach (string setName in sets.Keys)
+                {
+                    //We have "usedForTraining"
+                    if (setName == "train")
+                        continue;
+
+                    List<Dictionary<string, double[,]>> set = sets[setName];
+                    //Test with different level of noise
+                    for (double bitShiftProb = 0.0; bitShiftProb <= 1.0; bitShiftProb += 0.5)
+                    {
+                        foreach (Dictionary<string, double[,]> sample in set)
+                        {
+                            //Set the modalities
+                            int invertedBits = 0;
+                            Dictionary<Signal, double> modalityCorruption = new Dictionary<Signal, double>();
+                            foreach (Signal s in network.modalities)
+                            {
+                                modalityCorruption[s] = 0.0;
+
+                                s.reality = sample[network.labelsModalities[s]].Clone() as double[,];
+
+                                //Corrupt the signal
+                                if (network.labelsModalities[s].Contains("t1"))
+                                {
+                                    modalityCorruption[s] = bitShiftProb;
+                                    //1-----------------Toggle the bit
+                                    //ArrayHelper.ForEach(s.reality, false, (x, y) =>
+                                    //{
+                                    //    if (MathHelpers.Rand.NextDouble() < bitShiftProb)
+                                    //    {
+                                    //        s.reality[x, y] = Math.Abs(s.reality[x, y] - 1.0);
+                                    //        invertedBits++;
+                                    //    }
+                                    //});
+
+                                    //2-----------------Set bit to 0.5
+                                    ArrayHelper.ForEach(s.reality, false, (x, y) =>
+                                    {
+                                        if (MathHelpers.Rand.NextDouble() < bitShiftProb)
+                                        {
+                                            s.reality[x, y] = 0.5;
+                                            invertedBits++;
+                                        }
+                                    });
+                                }
+                            }
+
+                            network.Converge();
+                            network.Diverge();
+
+                            double globalError = 0.0;
+                            foreach (Signal s in network.modalities)
+                            {
+                                globalError += s.ComputeSumAbsoluteError();
+                            }
+
+                            //Dump the info
+                            string line = "";
+                            line +=
+                                modelName + "," +
+                                setName + "," +
+                                invertedBits + "," +
+                                sets["usedForTraining"].Count + "," +
+                                globalError + ",";
+
+                            if (EXTENSIVE_LOG)
+                                line +=
+                                GetString(sample["XY-t0"]) + "," +
+                                GetString(sample["XY-t1"]) + "," +
+                                GetString(sample["Vision-t0-Color"]) + "," +
+                                GetString(sample["Vision-t0-Orientation"]) + "," +
+                                GetString(sample["Vision-t0-Shape"]) + "," +
+                                GetString(sample["Saccade"]) + "," +
+                                GetString(sample["Vision-t1-Color"]) + "," +
+                                GetString(sample["Vision-t1-Orientation"]) + "," +
+                                GetString(sample["Vision-t1-Shape"]) + ",";
+                                
+
+                            foreach (Signal s in network.modalities)
+                            {
+                                line += modalityCorruption[s] + ",";
+                                if (EXTENSIVE_LOG)
+                                    line +=
+                                    GetString(s.reality) + "," +
+                                    GetString(s.prediction) + ",";
+
+                                line +=
+                                    MathHelpers.maximumAbsoluteDistance(s.prediction, sample[network.labelsModalities[s]]) + "," +
+                                    MathHelpers.maximumAbsoluteDistance(s.prediction, s.reality) + "," +
+                                    MathHelpers.sumAbsoluteDistance(s.prediction, sample[network.labelsModalities[s]]) + "," +
+                                    MathHelpers.sumAbsoluteDistance(s.prediction, s.reality) + ",";
+
+                                string modName = network.labelsModalities[s];
+                                if (modName.Contains("Vision"))
+                                {
+                                    line += countWrongPixels(modName,s.prediction, sample[network.labelsModalities[s]]).ToString() + ",";
+                                }
+                            }
+
+                            file.WriteLine(line);
+                        }
+                    }
+                }
+                file.Flush();
+                watch.Stop();
+                Console.WriteLine("Done {0}", watch.Elapsed);
+            }
+            file.Close();
+            Console.WriteLine(DateTime.Now + "\t" + "Test log written.");
+        }
+
+        private void buttonTest_Click(object sender, EventArgs e)
+        {
+            //EvaluateOnSets(testSet, "test_"+textBoxFileName.Text);
+            MessageBox.Show("This is a dummy button...");
         }
     }
 }

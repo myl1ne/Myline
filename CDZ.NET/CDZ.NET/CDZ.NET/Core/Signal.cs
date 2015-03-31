@@ -48,5 +48,38 @@ namespace CDZNET.Core
             ArrayHelper.ForEach(reality, false, (x, y) => { error += Math.Pow(reality[x,y] - prediction[x, y], 2.0); });
             return Math.Sqrt(error) / (Width * Height);
         }
+
+        /// <summary>
+        /// Compute the mean absolute error
+        /// </summary>
+        /// <returns>The error signal</returns>
+        public double ComputeMeanAbsoluteError()
+        {
+            double error = 0.0;
+            ArrayHelper.ForEach(reality, false, (x, y) => { error += Math.Abs(reality[x, y] - prediction[x, y]); });
+            return error / (Width * Height);
+        }
+
+        /// <summary>
+        /// Compute the max absolute error
+        /// </summary>
+        /// <returns>The error signal</returns>
+        public double ComputeMaxAbsoluteError()
+        {
+            double error = 0.0;
+            ArrayHelper.ForEach(reality, false, (x, y) => { double tmpError = Math.Abs(reality[x, y] - prediction[x, y]); if (tmpError > error) error = tmpError; });
+            return error;
+        }
+
+        /// <summary>
+        /// Compute the sum of absolute error
+        /// </summary>
+        /// <returns>The error signal</returns>
+        public double ComputeSumAbsoluteError()
+        {
+            double error = 0.0;
+            ArrayHelper.ForEach(reality, false, (x, y) => { error += Math.Abs(reality[x, y] - prediction[x, y]);});
+            return error;
+        }
     }
 }

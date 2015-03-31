@@ -67,10 +67,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Core\MM\AFORGE\MMNodeAFSOM.cs" />
+    <Compile Include="Core\MM\AFORGE\MMNodeMLP.cs" />
     <Compile Include="Core\MM\MMNodeLookupTable.cs" />
     <Compile Include="Core\MM\MMNodeMatLab.cs" />
     <Compile Include="Core\MM\MMNodeMWSOM.cs" />
-    <Compile Include="Core\MM\MMNodeRBM.cs" />
+    <Compile Include="Core\MM\AFORGE\MMNodeRBM.cs" />
     <Compile Include="Core\Neurons\Neuron.cs" />
     <Compile Include="Core\Neurons\Connection.cs" />
     <Compile Include="Core\Node.cs" />

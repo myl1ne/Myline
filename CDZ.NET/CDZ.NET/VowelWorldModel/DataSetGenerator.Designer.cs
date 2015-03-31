@@ -54,6 +54,7 @@
             // 
             // buttonGenerate
             // 
+            this.buttonGenerate.Enabled = false;
             this.buttonGenerate.Location = new System.Drawing.Point(148, 357);
             this.buttonGenerate.Name = "buttonGenerate";
             this.buttonGenerate.Size = new System.Drawing.Size(75, 23);
@@ -89,7 +90,6 @@
             // 
             // buttonTrain
             // 
-            this.buttonTrain.Enabled = false;
             this.buttonTrain.Location = new System.Drawing.Point(197, 433);
             this.buttonTrain.Name = "buttonTrain";
             this.buttonTrain.Size = new System.Drawing.Size(75, 23);
@@ -107,9 +107,11 @@
             this.buttonTest.TabIndex = 15;
             this.buttonTest.Text = "Test";
             this.buttonTest.UseVisualStyleBackColor = true;
+            this.buttonTest.Click += new System.EventHandler(this.buttonTest_Click);
             // 
             // listBoxAlgo
             // 
+            this.listBoxAlgo.Enabled = false;
             this.listBoxAlgo.FormattingEnabled = true;
             this.listBoxAlgo.Location = new System.Drawing.Point(22, 416);
             this.listBoxAlgo.Name = "listBoxAlgo";

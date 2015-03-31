@@ -1,4 +1,5 @@
-﻿using System;
+﻿using CDZNET.Helpers;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -16,7 +17,37 @@ namespace CDZNET
         {
             return distance(a.X, a.Y, b.X, b.Y, connectivity, width, height);
         }
+        public static double meanSquarredDistance(double[,] a, double[,] b)
+        {
+            if (a.Length != b.Length)
+                throw new IndexOutOfRangeException("Incongruent vector sizes.");
 
+            double euclideanDistance = 0.0f;
+            ArrayHelper.ForEach(a, false, (x, y) =>{euclideanDistance += Math.Pow(b[x, y] - a[x, y], 2.0);});
+            euclideanDistance = Math.Sqrt(euclideanDistance) / a.Length;
+
+            return euclideanDistance;
+        }
+        public static double maximumAbsoluteDistance(double[,] a, double[,] b)
+        {
+            if (a.Length != b.Length)
+                throw new IndexOutOfRangeException("Incongruent vector sizes.");
+
+            double distance = 0.0f;
+            ArrayHelper.ForEach(a, false, (x, y) => { double tmpDistance = Math.Abs(b[x, y] - a[x, y]); if (tmpDistance > distance)distance = tmpDistance; });
+
+            return distance;
+        }
+        public static double sumAbsoluteDistance(double[,] a, double[,] b)
+        {
+            if (a.Length != b.Length)
+                throw new IndexOutOfRangeException("Incongruent vector sizes.");
+
+            double distance = 0.0f;
+            ArrayHelper.ForEach(a, false, (x, y) => { distance += Math.Abs(b[x, y] - a[x, y]);});
+
+            return distance;
+        }
         public static double distance(float[] a, float[] b)
         {
             if (a.Length != b.Length)

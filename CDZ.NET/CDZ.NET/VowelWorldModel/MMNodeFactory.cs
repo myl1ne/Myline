@@ -8,25 +8,25 @@ using CDZNET;
 
 namespace VowelWorldModel
 {
-    static class MNNodeFactory
+    static class MMNodeFactory
     {
-        public enum Model { SOM, LUT, Matlab, MWSOM, DeepBelief };
+        public enum Model { DeepBelief, AFSOM, MLP, LUT, SOM, MWSOM, Matlab };
         public static MMNode obtain(Model mdl)
         {
             MMNode node = null;
             switch (mdl)
             {
                 case Model.SOM:
-                    node = new CDZNET.Core.MMNodeSOM(new CDZNET.Point2D(20, 20), false); //Here you specify which algo to be used
-                    (node as MMNodeSOM).learningRate = 0.03;
+                    node = new CDZNET.Core.MMNodeSOM(new CDZNET.Point2D(15, 15), false); //Here you specify which algo to be used
+                    (node as MMNodeSOM).learningRate = 0.1;
                     (node as MMNodeSOM).elasticity = 2.0;
                     (node as MMNodeSOM).activityRatioToConsider = 1.0;
                     break;
 
                 case Model.LUT:
                     node = new CDZNET.Core.MMNodeLookupTable(new Point2D(1, 1)); //Here you specify which algo to be used
-                    (node as MMNodeLookupTable).TRESHOLD_SIMILARITY = 0.1;
-                    (node as MMNodeLookupTable).learningRate = 0.1;
+                    (node as MMNodeLookupTable).TRESHOLD_SIMILARITY = 0.01;
+                    (node as MMNodeLookupTable).learningRate = 0.5;
                     break;
 
                 case Model.Matlab:
@@ -42,7 +42,15 @@ namespace VowelWorldModel
                     break;
 
                 case Model.DeepBelief:
-                    node = new CDZNET.Core.MMNodeDeepBeliefNetwork(new CDZNET.Point2D(30, 20), new int[]{10});
+                    node = new CDZNET.Core.MMNodeDeepBeliefNetwork(new CDZNET.Point2D(1, 1), new int[]{500});
+                    break;
+
+                case Model.AFSOM:
+                    node = new CDZNET.Core.MMNodeAFSOM(new CDZNET.Point2D(20, 20));
+                    break;
+
+                case Model.MLP:
+                    node = new CDZNET.Core.MMNodeMLP(new CDZNET.Point2D(1, 1), 75, 25, 25, 75); //Here you specify which algo to be used
                     break;
 
                 default:

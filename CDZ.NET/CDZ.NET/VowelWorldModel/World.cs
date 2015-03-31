@@ -199,5 +199,122 @@ namespace VowelWorldModel
             }
             return bmps;
         }
+
+        public Dictionary<string, double[,]> sampleSaccade(int retinaSize, int saccadeLength)
+        {
+            Dictionary<string, double[,]> record = new Dictionary<string, double[,]>();
+
+            //-----------------
+            //Fixate somewhere
+            int startX = rnd.Next(0, Width - retinaSize);
+            int startY = rnd.Next(0, Height - retinaSize);
+
+            //-----------------
+            //Saccade
+            int endX = -1; int dX = 0;
+            int endY = -1; int dY = 0;
+            while (endX < 0 || endY < 0 || endX >= Width - retinaSize || endY >= Height - retinaSize)
+            {
+                dX = rnd.Next(-saccadeLength, saccadeLength + 1);
+                dY = rnd.Next(-saccadeLength, saccadeLength + 1);
+                endX = startX + dX;
+                endY = startY + dY;
+            }
+
+            //-----------------
+            //Get the perceptive information
+            //1-Proprioception
+            //dX dY 
+            //Right = 0 1 0 0
+            //Left  = 1 0 0 0
+            //Up    = 0 0 0 1
+            //Down  = 0 0 1 0
+            record["Saccade"] = new double[4, 1];
+            if (dX == -saccadeLength)
+            {
+                record["Saccade"][0, 0] = 1;
+                record["Saccade"][1, 0] = 0;
+            }
+            else if (dX == saccadeLength)
+            {
+                record["Saccade"][0, 0] = 0;
+                record["Saccade"][1, 0] = 1;
+            }
+            else
+            {
+                record["Saccade"][0, 0] = 0;
+                record["Saccade"][1, 0] = 0;
+            }
+
+
+            if (dY == -saccadeLength)
+            {
+                record["Saccade"][2, 0] = 1;
+                record["Saccade"][3, 0] = 0;
+            }
+            else if (dY == saccadeLength)
+            {
+                record["Saccade"][2, 0] = 0;
+                record["Saccade"][3, 0] = 1;
+            }
+            else
+            {
+                record["Saccade"][2, 0] = 0;
+                record["Saccade"][3, 0] = 0;
+            }
+
+            //2-Vision
+            record["XY-t0"] = new double[2, 1] { { startX }, { startY } };
+            record["Vision-t0-Color"] = new double[retinaSize * 4, retinaSize];
+            record["Vision-t0-Orientation"] = new double[retinaSize * 2, retinaSize];
+            record["Vision-t0-Shape"] = new double[retinaSize * 4, retinaSize];
+            record["XY-t1"] = new double[2, 1] { { endX }, { endY } };
+            record["Vision-t1-Color"] = new double[retinaSize * 4, retinaSize];
+            record["Vision-t1-Orientation"] = new double[retinaSize * 2, retinaSize];
+            record["Vision-t1-Shape"] = new double[retinaSize * 4, retinaSize];
+            for (int i = 0; i < retinaSize; i++)
+            {
+                for (int j = 0; j < retinaSize; j++)
+                {
+                    Cell startPx = cells[startX + i, startY + j];
+                    Cell endPx = cells[endX + i, endY + j];
+
+                    //Color (4 compo)
+                    for (int compo = 0; compo < 4; compo++)
+                    {
+                        record["Vision-t0-Color"][i * 4 + compo, j] = startPx.colorCode[compo];
+                        record["Vision-t1-Color"][i * 4 + compo, j] = endPx.colorCode[compo];
+                    }
+
+                    //Orientation (2 compo)
+                    for (int compo = 0; compo < 2; compo++)
+                    {
+                        record["Vision-t0-Orientation"][i * 2 + compo, j] = startPx.orientationCode[compo];
+                        record["Vision-t1-Orientation"][i * 2 + compo, j] = endPx.orientationCode[compo];
+                    }
+
+                    //Shape (4 compo)
+                    for (int compo = 0; compo < 4; compo++)
+                    {
+                        record["Vision-t0-Shape"][i * 4 + compo, j] = (compo == startPx.shape) ? 1 : 0;
+                        record["Vision-t1-Shape"][i * 4 + compo, j] = (compo == endPx.shape) ? 1 : 0;
+                    }
+                }
+            }
+            return record;
+        }
+
+        public Dictionary<string, List<Dictionary<string, double[,]>>> generateSaccadeDatasets(int dataSetSize, int retinaSize, int saccadeLength)
+        {
+            Dictionary<string, List<Dictionary<string, double[,]>>> datasets = new Dictionary<string, List<Dictionary<string, double[,]>>>();
+            datasets["train"] = new List<Dictionary<string, double[,]>>();
+            datasets["test"] = new List<Dictionary<string, double[,]>>();
+            for (int step = 0; step < dataSetSize; step++)
+            {
+                datasets["train"].Add(sampleSaccade(retinaSize, saccadeLength));
+                datasets["test"].Add(sampleSaccade(retinaSize, saccadeLength));
+            }
+            return datasets;
+        }
     }
 }

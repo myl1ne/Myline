@@ -20,7 +20,7 @@ namespace VowelWorldModel
     {
         Random rnd = new Random();
         //Parameters
-        MNNodeFactory.Model modelUsed = MNNodeFactory.Model.DeepBelief;
+        MMNodeFactory.Model modelUsed = MMNodeFactory.Model.DeepBelief;
         int retinaSize = 3;
         int shapeCount = 4;
         int worldWidth = 250;
@@ -66,7 +66,7 @@ namespace VowelWorldModel
             //Down  = 0 0 1 0
 
             //2-Areas 
-            CA3 = MNNodeFactory.obtain(modelUsed);
+            CA3 = MMNodeFactory.obtain(modelUsed);
 
             //Define which signal will enter CA3
             CA3.addModality(LEC_ColorT0, "ColorT0");

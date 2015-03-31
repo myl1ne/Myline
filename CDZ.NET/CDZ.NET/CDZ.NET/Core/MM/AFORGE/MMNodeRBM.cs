@@ -46,9 +46,6 @@ namespace CDZNET.Core
             base.addModality(s, label);
 
             //Each time we add a modality the structure of the network changes
-            int inputCount = 0;
-            foreach(Signal mod in modalities)
-                inputCount += mod.Width * mod.Height;
 
             //int[] wholeStructure = new int[hiddenLayers.Length + 2];
             //wholeStructure[0] = inputCount;
@@ -56,33 +53,18 @@ namespace CDZNET.Core
             //    wholeStructure[i + 1] = hiddenLayers[i];
             //wholeStructure[hiddenLayers.Length+1] = inputCount;
 
-            int[] wholeStructure = new int[hiddenLayers.Length + 1];
-            wholeStructure[0] = inputCount;
-            for (int i = 0; i < hiddenLayers.Length; i++)
-                wholeStructure[i + 1] = hiddenLayers[i];
-            wholeStructure[hiddenLayers.Length] = inputCount;
+            //int[] wholeStructure = new int[hiddenLayers.Length + 1];
+            //wholeStructure[0] = inputCount;
+            //for (int i = 0; i < hiddenLayers.Length; i++)
+            //    wholeStructure[i + 1] = hiddenLayers[i];
+            //wholeStructure[hiddenLayers.Length] = inputCount;
 
-            network = new DeepBeliefNetwork(new BernoulliFunction(), inputCount, wholeStructure);
+            network = new DeepBeliefNetwork(new BernoulliFunction(), InputCount, hiddenLayers);
 
             new GaussianWeights(network).Randomize();
             network.UpdateVisibleWeights();
-
-            for (int _layerIndex = 0; _layerIndex < wholeStructure.Length; _layerIndex++)
-            {         
-                teacher = new DeepBeliefNetworkLearning(network)
-                {
-                    Algorithm = (h, v, i) => new ContrastiveDivergenceLearning(h, v)
-                    {
-                        LearningRate = learningRate,
-                        Momentum = momentum,
-                        Decay = weightDecay,
-                    },
-
-                    LayerIndex = _layerIndex,
-                };
-            }
         }
-
+        
         /// <summary>
         /// Get the modalities signals by concatenating them into 2 vectors.
         /// </summary>
@@ -237,16 +219,31 @@ namespace CDZNET.Core
                 samples[i] = concatenateTrainingSample(trainingSet[i]);
             }
 
-            globalMeanSquarred = teacher.RunEpoch(samples);
-            globalMeanSquarred /= (samples.Count() * samples[0].Count());
+            for (int _layerIndex = 0; _layerIndex < network.Layers.Length; _layerIndex++)
+            {
+                //Create the teacher for the layer
+                teacher = new DeepBeliefNetworkLearning(network)
+                {
+                    Algorithm = (h, v, i) => new ContrastiveDivergenceLearning(h, v)
+                    {
+                        LearningRate = learningRate,
+                        Momentum = momentum,
+                        Decay = weightDecay,
+                    },
+
+                    LayerIndex = _layerIndex,
+                };
+
+                //Run the epoch for the layer
+                double[][] sampleForLayer = teacher.GetLayerInput(samples);
+                teacher.RunEpoch(sampleForLayer);
+            }
             network.UpdateVisibleWeights();
 
-            //We do not know the error specific to each modality, just set it to -1
-            modalitiesMeanSquarredError = new Dictionary<Signal,double>();
-            foreach(Signal s in modalities)
-            {
-                modalitiesMeanSquarredError[s] = -1;
-            }
+            //Run manually a base class epoch to have the exact same error measurement as other algos
+            learningLocked = true;
+            base.Epoch(trainingSet, out modalitiesMeanSquarredError, out globalMeanSquarred);
+            learningLocked = false;
         }
     }
 }

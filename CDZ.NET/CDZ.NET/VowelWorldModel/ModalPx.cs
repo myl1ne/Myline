@@ -20,7 +20,7 @@ namespace VowelWorldModel
     {
         Random rnd = new Random();
         //Parameters
-        MNNodeFactory.Model modelUsed = MNNodeFactory.Model.MWSOM;
+        MMNodeFactory.Model modelUsed = MMNodeFactory.Model.MWSOM;
         int retinaSize = 3;
         int shapeCount = 4;
         int worldWidth = 100;
@@ -52,7 +52,7 @@ namespace VowelWorldModel
 
             //Generate the network
             //1-Areas          
-            CA3 = MNNodeFactory.obtain(modelUsed);
+            CA3 = MMNodeFactory.obtain(modelUsed);
 
             //2-Inputs
             LEC_Color = new Signal[retinaSize, retinaSize];

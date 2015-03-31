@@ -1,4 +1,5 @@
-﻿using System;
+﻿using CDZNET.Helpers;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -27,6 +28,8 @@ namespace CDZNET.Core
         public event EpochHandler onEpoch;
         #endregion
 
+        public int InputCount { get;  private set; }
+
         public MMNode(Point2D outputDim)
             : base(outputDim)
         {
@@ -34,6 +37,7 @@ namespace CDZNET.Core
             modalitiesInfluence = new Dictionary<Signal, double>();
             modalitiesLabels = new Dictionary<string, Signal>();
             labelsModalities = new Dictionary<Signal, string>();
+            InputCount = 0;
         }
 
         public virtual void addModality(Signal s, string label = null)
@@ -47,6 +51,7 @@ namespace CDZNET.Core
 
             labelsModalities[s] = label;
             modalitiesLabels[label] = s;
+            InputCount += s.Width*s.Height;
         }
 
         public void Cycle()
@@ -137,11 +142,11 @@ namespace CDZNET.Core
         }
 
 
-        public virtual void Epoch(List<Dictionary<Signal, double[,]> > trainingSet, out Dictionary<Signal, double> modalitiesMeanSquarredError, out double globalMeanSquarred)
+        public virtual void Epoch(List<Dictionary<Signal, double[,]> > trainingSet, out Dictionary<Signal, double> modalitiesMaxError, out double globalMeanMaxError)
         {
-            modalitiesMeanSquarredError = new Dictionary<Signal, double>();     
+            modalitiesMaxError = new Dictionary<Signal, double>();     
             foreach(Signal s in modalities)
-                modalitiesMeanSquarredError[s] = 0.0;
+                modalitiesMaxError[s] = 0.0;
 
             foreach(Dictionary<Signal, double[,]> sample in trainingSet)
             {
@@ -155,16 +160,16 @@ namespace CDZNET.Core
 
                 //Compute error
                 foreach (Signal s in modalities)
-                    modalitiesMeanSquarredError[s] += s.ComputeMeanSquarredError();
+                    modalitiesMaxError[s] += s.ComputeMaxAbsoluteError();
             }
 
-            globalMeanSquarred = 0.0;
+            globalMeanMaxError = 0.0;
             foreach (Signal s in modalities)
             {
-                modalitiesMeanSquarredError[s] /= trainingSet.Count;
-                globalMeanSquarred += modalitiesMeanSquarredError[s];
+                modalitiesMaxError[s] /= trainingSet.Count;
+                globalMeanMaxError += modalitiesMaxError[s];
             }
-            globalMeanSquarred /= modalities.Count;
+            globalMeanMaxError /= modalities.Count;
         }
 
         /// <summary>
@@ -174,16 +179,16 @@ namespace CDZNET.Core
         /// <param name="maximumEpochs">The maximum number of epochs to run</param>
         /// <param name="stopCritMSE">An optional MSE criterium for stopping</param>
         /// <returns>The number of epoch ran when the batch stopped</returns>
-        public int Batch(List<Dictionary<Signal, double[,]> > trainingSet, int maximumEpochs, double stopCritMSE = 0.0)
+        public int Batch(List<Dictionary<Signal, double[,]> > trainingSet, int maximumEpochs, double stopCritMaxE = 0.0)
         {
             if (onBatchStart != null)
-                onBatchStart(maximumEpochs, stopCritMSE);
+                onBatchStart(maximumEpochs, stopCritMaxE);
 
             double lastEpochMSE = double.PositiveInfinity;
             Dictionary<Signal, double> modalitiesMSE;
             
             int i = 0;
-            for (; i < maximumEpochs && lastEpochMSE>stopCritMSE; i++)
+            for (; i < maximumEpochs && lastEpochMSE > stopCritMaxE; i++)
 			{
 			    Epoch(trainingSet, out modalitiesMSE, out lastEpochMSE);
                 if (onEpoch!=null)
@@ -214,6 +219,72 @@ namespace CDZNET.Core
             }
 
             return Batch(trainingSetConverted, maximumEpochs, stopCritMSE);
+        }
+
+        /// <summary>
+        /// Get the modalities signals by concatenating them into 2 vectors.
+        /// </summary>
+        /// <param name="realSignal">The vector that will contain the real data</param>
+        /// <param name="predictedSignal">The vector that will contain the predicted data</param>
+        protected void getConcatenatedModalities(out double[] realSignal, out double[] predictedSignal)
+        {
+            double[] tmpRealSignal = new double[InputCount];
+            double[] tmpPredictedSignal = new double[InputCount];
+
+            int currentIndex = 0;
+            foreach (Signal s in modalities)
+            {
+                ArrayHelper.ForEach(s.reality, false, (x, y) =>
+                {
+                    tmpRealSignal[currentIndex] = s.reality[x, y];
+                    tmpPredictedSignal[currentIndex] = s.prediction[x, y];
+                    currentIndex++;
+                });
+            }
+            realSignal = tmpRealSignal;
+            predictedSignal = tmpPredictedSignal;
+        }
+
+        /// <summary>
+        /// Concatenate a training sample into a double vector
+        /// </summary>
+        /// <param name="realSignal">The vector that will contain the real data</param>
+        /// <param name="predictedSignal">The vector that will contain the predicted data</param>
+        protected double[] concatenateTrainingSample(Dictionary<Signal, double[,]> trainingSample)
+        {
+            double[] concatenated = new double[InputCount];
+
+            int currentIndex = 0;
+            foreach (Signal s in modalities)
+            {
+                ArrayHelper.ForEach(s.reality, false, (x, y) =>
+                {
+                    concatenated[currentIndex] = trainingSample[s][x, y];
+                    currentIndex++;
+                });
+            }
+            return concatenated;
+        }
+
+        /// <summary>
+        /// Set the modalities signals by unconcatenating vectors.
+        /// </summary>
+        /// <param name="realSignal">The vector containing real data (set to null for not touching the real part)</param>
+        /// <param name="predictedSignal">The vector containing predicted data (set to null for not touching the predicted part)</param>
+        protected void setConcatenatedModalities(double[] realSignal, double[] predictedSignal)
+        {
+            int currentIndex = 0;
+            foreach (Signal s in modalities)
+            {
+                ArrayHelper.ForEach(s.reality, false, (x, y) =>
+                {
+                    if (realSignal != null)
+                        s.reality[x, y] = realSignal[currentIndex];
+                    if (predictedSignal != null)
+                        s.prediction[x, y] = predictedSignal[currentIndex];
+                    currentIndex++;
+                });
+            }
         }
     }
 }

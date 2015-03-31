@@ -189,7 +189,7 @@ namespace CDZNET.Core
             for (int relaxationT = 0; relaxationT < tau; relaxationT++)
             {
                 //Zero the input current & activity
-                ArrayHelper.ForEach(map, false, (x, y) =>
+                ArrayHelper.ForEach(map, true, (x, y) =>
                 {
                     map[x, y].inputCurrent = 0.0;
                     if (relaxationT == 0) // Only input from afferent at t0
@@ -200,7 +200,7 @@ namespace CDZNET.Core
                 });
 
                 //Propagate the input current
-                ArrayHelper.ForEach(map, false, (x, y) =>
+                ArrayHelper.ForEach(map, true, (x, y) =>
                 {
                     //if (relaxationT == 0) // Only input from afferent at t0
                     {
@@ -236,7 +236,7 @@ namespace CDZNET.Core
 
 
                 //Compute the activity
-                ArrayHelper.ForEach(map, false, (x, y) =>
+                ArrayHelper.ForEach(map, true, (x, y) =>
                 {
                     foreach (Connection c in map[x, y].inputs["lateral"])
                     {
@@ -290,7 +290,7 @@ namespace CDZNET.Core
             //Average over winners
             foreach (Signal s in modalities)
             {
-                ArrayHelper.ForEach(neuralModalities[s], false, (x1, y1) =>
+                ArrayHelper.ForEach(neuralModalities[s], true, (x1, y1) =>
                 {
                     if (contribution[s][x1, y1] == 0.0)
                         throw new Exception("Damn");
@@ -310,7 +310,7 @@ namespace CDZNET.Core
             //LEARNING happens here
             if ( !learningLocked && ( mu > 0.0 || etha > 0.0) )
             {
-                ArrayHelper.ForEach(map, false, (x, y) =>
+                ArrayHelper.ForEach(map, true, (x, y) =>
                 {
                     //Train the afferent connections
                     if (mu > 0.0)

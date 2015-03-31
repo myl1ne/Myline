@@ -14,7 +14,7 @@ namespace CDZNET.Core
     public class MMNodeLookupTable : MMNode
     {
         public double TRESHOLD_SIMILARITY = 0.01;
-        public double learningRate = 0.01;
+        public double learningRate = 0.5;
         public bool allowTemplateCreation = true;
         public class Template
         {
@@ -164,19 +164,21 @@ namespace CDZNET.Core
             
             //make predictions & detect the rule violations 
             predictions.Clear();
+            //Parallel.ForEach(modalities, sTarget =>
             foreach(Signal sTarget in modalities)
             {
                 predictions[sTarget] = new Dictionary<Signal, Prediction>();
 
                 //Pass all modalities and detect the rules violations
-                foreach (Signal sSource in modalities)
+                foreach(Signal sSource in modalities)
+                //Parallel.ForEach(modalities, sSource =>
                 {
                     //Check all the associations known and select the closest and the strongest
                     KeyValuePair<Template, int> closest = bestTemplates[sSource].Key.findMatchingAssociation(sTarget, sTarget.reality);
                     KeyValuePair<Template, int> strongest = bestTemplates[sSource].Key.findBestAssociation(sTarget);
-                    
+
                     //If we do not have any expectation (means we just created this template)
-                    if(closest.Key==null)
+                    if (closest.Key == null)
                     {
                         //Store the best template as the expectation (it can be also a template just created)
                         bestTemplates[sSource].Key.associations[sTarget][bestTemplates[sTarget].Key] = 1;
@@ -191,10 +193,10 @@ namespace CDZNET.Core
                             //We increment the encounters counter
                             bestTemplates[sSource].Key.associations[sTarget][bestTemplates[sTarget].Key] += 1;
                         }
-                        else 
+                        else
                         {
                             //our closest prediction does not match what we see now. 
-                            if (!learningLocked && learningRate>0)
+                            if (!learningLocked && learningRate > 0)
                             {
                                 //Build the association
                                 bestTemplates[sSource].Key.associations[sTarget][bestTemplates[sTarget].Key] = 1;
@@ -212,8 +214,8 @@ namespace CDZNET.Core
                     predictions[sTarget][sSource].predictor = bestTemplates[sSource].Key;
                     predictions[sTarget][sSource].mostClose = closest;
                     predictions[sTarget][sSource].mostLikely = strongest;
-                }
-            }
+                };
+            };
         }
 
         /// <summary>
@@ -222,7 +224,7 @@ namespace CDZNET.Core
         protected override void diverge() 
         {
             //Passes all the predictions & cook a mixture
-            foreach (Signal sTarget in modalities)
+            Parallel.ForEach(modalities, sTarget =>
             {
                 //Zero prediction
                 ArrayHelper.ForEach(sTarget.prediction, true, (x, y) => { sTarget.prediction[x, y] = 0.0; });
@@ -238,19 +240,19 @@ namespace CDZNET.Core
                         ArrayHelper.ForEach(sTarget.prediction, false, (x, y) =>
                         {
                             int encounters = predictions[sTarget][sSource].mostLikely.Value;
-                            double trustFactor = (1-confidence) * encounters * modalitiesInfluence[sSource];
+                            double trustFactor = (1 - confidence) * encounters * modalitiesInfluence[sSource];
                             sTarget.prediction[x, y] += trustFactor * predictions[sTarget][sSource].mostLikely.Key.template[x, y];
                             contributions[x, y] += trustFactor;
 
                             encounters = predictions[sTarget][sSource].mostClose.Value;
                             trustFactor = (confidence) * encounters * modalitiesInfluence[sSource];
                             sTarget.prediction[x, y] += trustFactor * predictions[sTarget][sSource].mostClose.Key.template[x, y];
-                            contributions[x, y] += trustFactor;                 
+                            contributions[x, y] += trustFactor;
                         });
                     }
                 }
                 ArrayHelper.ForEach(sTarget.prediction, true, (x, y) => { sTarget.prediction[x, y] /= contributions[x, y]; });
-            }
+            });
         }
 
         /// <summary>
@@ -273,14 +275,14 @@ namespace CDZNET.Core
             if (!learningLocked)
             {
                 //We train the system by moving each pattern a bit closer to what we perceived
-                foreach (Signal sTarget in modalities)
+                Parallel.ForEach(modalities, sTarget =>
                 {
                     ArrayHelper.ForEach(sTarget.prediction, true, (x, y) =>
                     {
                         double error = sTarget.reality[x, y] - bestTemplates[sTarget].Key.template[x, y];
                         bestTemplates[sTarget].Key.template[x, y] += learningRate * error;
                     });
-                }
+                });
             }
         }
 
