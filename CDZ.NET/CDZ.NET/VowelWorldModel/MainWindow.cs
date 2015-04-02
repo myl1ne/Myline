@@ -18,7 +18,7 @@ namespace VowelWorldModel
     public partial class MainWindow : Form
     {
         //Parameters
-        MMNodeFactory.Model modelUsed = MMNodeFactory.Model.DeepBelief;
+        MMNodeFactory.Model modelUsed = MMNodeFactory.Model.MWSOM;
         int retinaSize = 1;
         int shapeCount = 4;
         int worldWidth = 20;
@@ -56,7 +56,7 @@ namespace VowelWorldModel
             LEC_Color = new CDZNET.Core.Signal(retinaSize*4, retinaSize); //Visual matrix (RED=0001 / BLUE=0010 / GREEN=0100 / YELLOW=1000)
             LEC_Orientation = new CDZNET.Core.Signal(retinaSize*2, retinaSize); //Visual matrix (an orientation is encoded on 2 bits)
             LEC_Shape = new CDZNET.Core.Signal(retinaSize, retinaSize); //Visual matrix
-            MEC = new CDZNET.Core.Signal(2, 1); //Proprioception/Grid Cells
+            MEC = new CDZNET.Core.Signal(worldWidth + worldHeight, 1); //Proprioception/Grid Cells
 
             //2-Areas
             CA3 = MMNodeFactory.obtain(modelUsed);
@@ -98,8 +98,9 @@ namespace VowelWorldModel
 
                 for (int i = 0; i < pretrainSteps; i++)
                 {
-                    MEC.reality[0, 0] = rnd.NextDouble();
-                    MEC.reality[1, 0] = rnd.NextDouble();
+                    Array.Clear(MEC.reality, 0, MEC.reality.Length);
+                    MEC.reality[rnd.Next(0, world.Width), 0] = 1.0;
+                    MEC.reality[rnd.Next(0, world.Height), 0] = 1.0;
                     CA3.Converge();
                     CA3.Diverge();
                     progressBarCurrentOp.PerformStep();
@@ -130,8 +131,9 @@ namespace VowelWorldModel
                 //-----------------
                 //Get the perceptive information
                 //1-Proprioception
-                MEC.reality[0, 0] = nextX / (double)world.Width; //We want in range [0,1]
-                MEC.reality[1, 0] = nextY / (double)world.Height; //We want in range [0,1]
+                Array.Clear(MEC.reality, 0, MEC.reality.Length);
+                MEC.reality[nextX, 0] = 1.0;
+                MEC.reality[world.Width + nextY, 0] = 1.0; 
 
                 //2-Vision
                 for (int i = 0; i < retinaSize; i++)
@@ -237,8 +239,9 @@ namespace VowelWorldModel
                     predictedWorld.cells[x, y] = new Cell();
                     //if (x >= retinaSize / 2 && x < world.Width - retinaSize / 2 && y >= retinaSize / 2 && y < world.Height - retinaSize / 2)
                     {
-                        MEC.reality[0, 0] = x / (double)world.Width; //We want in range [0,1]
-                        MEC.reality[1, 0] = y / (double)world.Height; //We want in range [0,1]
+                        Array.Clear(MEC.reality, 0, MEC.reality.Length);
+                        MEC.reality[x, 0] = 1.0;
+                        MEC.reality[world.Width + y, 0] = 1.0;
                         Dictionary<Signal, double[,]> prediction = CA3.Predict(new List<Signal> { MEC });
 
                         //We use only the center as the prediction

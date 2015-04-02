@@ -10,14 +10,15 @@ namespace VowelWorldModel
 {
     static class MMNodeFactory
     {
+
         public enum Model { DeepBelief, AFSOM, MLP, LUT, SOM, MWSOM, Matlab };
-        public static MMNode obtain(Model mdl)
+        public static MMNode obtain(Model mdl, int nbNeurons = 20)
         {
             MMNode node = null;
             switch (mdl)
             {
                 case Model.SOM:
-                    node = new CDZNET.Core.MMNodeSOM(new CDZNET.Point2D(15, 15), false); //Here you specify which algo to be used
+                    node = new CDZNET.Core.MMNodeSOM(new CDZNET.Point2D(nbNeurons, nbNeurons), false); //Here you specify which algo to be used
                     (node as MMNodeSOM).learningRate = 0.1;
                     (node as MMNodeSOM).elasticity = 2.0;
                     (node as MMNodeSOM).activityRatioToConsider = 1.0;
@@ -38,15 +39,15 @@ namespace VowelWorldModel
                     break;
 
                 case Model.MWSOM:
-                    node = new CDZNET.Core.MMNodeMWSOM(new CDZNET.Point2D(30, 20));
+                    node = new CDZNET.Core.MMNodeMWSOM(new CDZNET.Point2D(nbNeurons, nbNeurons));
                     break;
 
                 case Model.DeepBelief:
-                    node = new CDZNET.Core.MMNodeDeepBeliefNetwork(new CDZNET.Point2D(1, 1), new int[]{500});
+                    node = new CDZNET.Core.MMNodeDeepBeliefNetwork(new CDZNET.Point2D(1, 1), new int[] { nbNeurons * nbNeurons });
                     break;
 
                 case Model.AFSOM:
-                    node = new CDZNET.Core.MMNodeAFSOM(new CDZNET.Point2D(20, 20));
+                    node = new CDZNET.Core.MMNodeAFSOM(new CDZNET.Point2D(nbNeurons, nbNeurons));
                     break;
 
                 case Model.MLP:

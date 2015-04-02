@@ -19,7 +19,7 @@ namespace CDZNET.Core
         /// <summary>
         /// Number of cycles of presentation of a stimulus
         /// </summary>
-        public int tau = 5;
+        public int tau = 1;
 
         /// <summary>
         /// Tuning factor afferent vs lateral
@@ -293,8 +293,13 @@ namespace CDZNET.Core
                 ArrayHelper.ForEach(neuralModalities[s], true, (x1, y1) =>
                 {
                     if (contribution[s][x1, y1] == 0.0)
-                        throw new Exception("Damn");
-                    s.prediction[x1, y1] /= contribution[s][x1, y1];
+                    {
+                        s.prediction[x1, y1] = 0;
+                        Console.WriteLine("PROBLEM: MWSOM line 298, contribution == 0.0");
+                        //throw new Exception("Damn");
+                    }
+                    else
+                        s.prediction[x1, y1] /= contribution[s][x1, y1];
                     //s.prediction[x1, y1] /= winners.Count;
                 });
             }

@@ -126,16 +126,16 @@ namespace VowelWorldModel
             //Choose the models to test
             List<MMNodeFactory.Model> modelsToTest = new List<MMNodeFactory.Model>()
             {
-                //MMNodeFactory.Model.DeepBelief,
+                MMNodeFactory.Model.DeepBelief,
                 //MNNodeFactory.Model.LUT,
-                //MMNodeFactory.Model.AFSOM,
+                MMNodeFactory.Model.AFSOM,
                 //MNNodeFactory.Model.SOM,
                 ////MNNodeFactory.Model.MWSOM,
-                MMNodeFactory.Model.MLP
+                //MMNodeFactory.Model.MLP
             };
 
             //Vary the size of the trainingset
-            for (int itemToTrainOn = 0; itemToTrainOn <= setsToEvaluate["train"].Count; itemToTrainOn += (itemToTrainOn>100)?200:20)
+            for (int itemToTrainOn = 100; itemToTrainOn <= setsToEvaluate["train"].Count; itemToTrainOn += (itemToTrainOn==100)?400:500)
             {   
                 //Create
                 Dictionary<string, MMNode> models = createModels(modelsToTest);
@@ -207,27 +207,30 @@ namespace VowelWorldModel
         {
             Dictionary<string, MMNode> models = new Dictionary<string, MMNode>();
 
-            foreach (MMNodeFactory.Model selectedModel in modelsToTrain)
+            for (int neuronsCount = 10; neuronsCount < 100; neuronsCount += 20)
             {
-                //Create the model
-                //MNNodeFactory.Model selectedModel;
-                //Enum.TryParse<MNNodeFactory.Model>(uncastedMdl.ToString(), out selectedModel);
-                models[selectedModel.ToString()] = MMNodeFactory.obtain(selectedModel);
+                foreach (MMNodeFactory.Model selectedModel in modelsToTrain)
+                {
+                    //Create the model
+                    //MNNodeFactory.Model selectedModel;
+                    //Enum.TryParse<MNNodeFactory.Model>(uncastedMdl.ToString(), out selectedModel);
+                    models[selectedModel.ToString() + "_" + neuronsCount] = MMNodeFactory.obtain(selectedModel, neuronsCount);
 
-                MMNode network = models[selectedModel.ToString()];
-                network.onEpoch += network_onEpoch;
-                //network.addModality( new Signal(2,1), "XY-t0");
-                //network.addModality( new Signal(2,1), "XY-t1");
-                network.addModality(new Signal(retinaSize * 4, retinaSize), "Vision-t0-Color");
-                network.addModality(new Signal(retinaSize * 2, retinaSize), "Vision-t0-Orientation");
-                //network.addModality(new Signal(retinaSize * 4, retinaSize), "Vision-t0-Shape");
-                network.addModality(new Signal(4, 1), "Saccade");
-                network.addModality(new Signal(retinaSize * 4, retinaSize), "Vision-t1-Color");
-                network.addModality(new Signal(retinaSize * 2, retinaSize), "Vision-t1-Orientation");
-                //network.addModality(new Signal(retinaSize * 4, retinaSize), "Vision-t1-Shape");
+                    MMNode network = models[selectedModel.ToString() + "_" + neuronsCount];
+                    network.onEpoch += network_onEpoch;
+                    //network.addModality( new Signal(2,1), "XY-t0");
+                    //network.addModality( new Signal(2,1), "XY-t1");
+                    network.addModality(new Signal(retinaSize * 4, retinaSize), "Vision-t0-Color");
+                    network.addModality(new Signal(retinaSize * 2, retinaSize), "Vision-t0-Orientation");
+                    //network.addModality(new Signal(retinaSize * 4, retinaSize), "Vision-t0-Shape");
+                    network.addModality(new Signal(4, 1), "Saccade");
+                    network.addModality(new Signal(retinaSize * 4, retinaSize), "Vision-t1-Color");
+                    network.addModality(new Signal(retinaSize * 2, retinaSize), "Vision-t1-Orientation");
+                    //network.addModality(new Signal(retinaSize * 4, retinaSize), "Vision-t1-Shape");
 
-                //Apply a treshold function on the modalities
-                network.onDivergence += network_onDivergence;
+                    //Apply a treshold function on the modalities
+                    network.onDivergence += network_onDivergence;
+                }
             }
             return models;
         }
