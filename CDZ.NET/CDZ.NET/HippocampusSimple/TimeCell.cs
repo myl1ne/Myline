@@ -6,18 +6,28 @@ using System.Threading.Tasks;
 
 namespace HippocampusSimple
 {
-    class TimeCell
+    class TimeCell:IComparable
     {
-        public int level { public get; private set; }
+        public int level { get; private set; }
         public int totalEncounters = 0;
 
         public bool isActive;
-        public Dictionary<TimeCell, double> next { get; set; }
-        public Dictionary<TimeCell, double> previous { get; set; }
+        public Dictionary<TimeCell, double> next = new Dictionary<TimeCell, double>();
+        public Dictionary<TimeCell, double> previous = new Dictionary<TimeCell, double>();
         
         public TimeCell(int level)
         {
             this.level = level;
+        }
+
+        public int CompareTo(object obj)
+        {
+            if (obj is TimeCell)
+            {
+                TimeCell other = obj as TimeCell;
+                return this.level.CompareTo(other.level);
+            }
+            return 0;
         }
     }
 }
