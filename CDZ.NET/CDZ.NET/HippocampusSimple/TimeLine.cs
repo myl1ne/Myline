@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace TimeCells
 {
-    class TimeLine
+    public class TimeLine
     {
         public List<TimeCell> cells = new List<TimeCell>();
         public double[] receptiveField;

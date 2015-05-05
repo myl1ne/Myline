@@ -37,8 +37,8 @@ namespace TimeCells
             Sequence abcde = new Sequence() { a, b, c, d, e };
             Sequence ebcda = new Sequence() { e, b, c, d, a };
             Sequence abddc = new Sequence() { a, b, d, d, c };
-            Sequence ab = new Sequence() { a, b };
-            Sequence cd = new Sequence() { c, d };
+            Sequence ab = new Sequence()    { a, b };
+            Sequence cd = new Sequence()    { c, d };
 
             List<Sequence> sequencesSet = new List<Sequence>() { ab, cd, abcde, ebcda, abddc };
             

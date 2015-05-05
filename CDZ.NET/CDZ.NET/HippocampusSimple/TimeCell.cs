@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace TimeCells
 {
-    class TimeCell:IComparable
+    public class TimeCell:IComparable
     {
         public int level { get; private set; }
         public int totalEncounters = 0;

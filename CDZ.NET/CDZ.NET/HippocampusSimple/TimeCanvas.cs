@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace TimeCells
 {
-    class TimeCanvas
+    public class TimeCanvas
     {
         public double parameterLineCreationTreshold = 1.0;
         public double parameterFFLearningRate = 0.01;
@@ -35,7 +35,6 @@ namespace TimeCells
         public void Train(List<double[]> inputs)
         {
             Reset();
-
             for (int i = 0; i < inputs.Count; i++)
             {
                 Train(inputs[i]);
