@@ -8,6 +8,8 @@ namespace TimeCells
 {
     public class TimeCanvas
     {
+        public delegate double DistanceFunction(double[] a, double[] b);
+
         public double parameterLineCreationTreshold = 1.0;
         public double parameterFFLearningRate = 0.01;
 
@@ -17,10 +19,16 @@ namespace TimeCells
         private List<TimeLine> lines = new List<TimeLine>();
         private List<TimeLine> activeLines = new List<TimeLine>();
 
-        public TimeCanvas(int inputSize, int timeLineSize = 7)
+        public DistanceFunction distanceFx;
+
+        public TimeCanvas(int inputSize, int timeLineSize = 7, DistanceFunction distanceFunction = null)
         {
             this.inputSize = inputSize;
             this.timeLineSize = timeLineSize;
+            if (distanceFunction == null)
+                this.distanceFx = CDZNET.MathHelpers.distance;
+            else
+                this.distanceFx = distanceFunction;
         }
 
         public void Reset()
@@ -32,13 +40,24 @@ namespace TimeCells
             activeLines.Clear();
         }
 
-        public void Train(List<double[]> inputs)
+        public void Train(List<double[]> inputs, ref List<double[]> predictions, ref List<double> predictionsError, ref double meanPredictionsError)
         {
             Reset();
+            meanPredictionsError = 0.0;
             for (int i = 0; i < inputs.Count; i++)
             {
+                if (predictions != null)
+                {
+                    double[] prediction = Predict();
+                    double[] reality = inputs[i];
+                    double itemError = distanceFx(prediction, reality);
+                    predictions.Add(prediction);
+                    predictionsError.Add(itemError);
+                    meanPredictionsError += itemError;
+                }
                 Train(inputs[i]);
             }
+            meanPredictionsError /= inputs.Count;
         }
 
         /// <summary>
@@ -47,29 +66,8 @@ namespace TimeCells
         /// <param name="input"></param>
         public void Train(double[] input)
         {
-            //1-Find the winner timeline
-            TimeLine bestLine = null;
-            double bestDistance = double.PositiveInfinity;
-            bool hasGoodTimeline = FindBestLine(input, out bestLine, out bestDistance);
-
-            //2-Create a new timeline if necessary
-            if (!hasGoodTimeline)
-            {
-                bestLine = new TimeLine(input, timeLineSize);
-                lines.Add(bestLine);
-            }
-            //2-OR tune up the RF of the existing timeline
-            else
-            {
-                for(int i=0; i<inputSize; i++)
-                {
-                    double e = input[i] - bestLine.receptiveField[i];
-                    bestLine.receptiveField[i] += parameterFFLearningRate * e;
-                }
-            }
-
-            //3-Activate the first cell of the winner line
-            bestLine.cells[0].isActive = true;
+            //1 - Find the best timeline and activate its first cell
+            TimeLine bestLine = PresentInput(input, true, true);
 
             //4-Gather all the active cells sorted by how deep they are on the timeline
             SortedList<TimeCell, int> activeCells = new SortedList<TimeCell, int>();
@@ -110,9 +108,43 @@ namespace TimeCells
             }
 
             //6-Make the activity propagate one step
-            foreach(TimeLine line in lines)
+            PropagateActivity();
+        }
+
+        public TimeLine PresentInput(double[] input, bool allowCreation, bool allowLearning)
+        {
+            //1-Find the winner timeline
+            TimeLine bestLine = null;
+            double bestDistance = double.PositiveInfinity;
+            bool hasGoodTimeline = FindBestLine(input, out bestLine, out bestDistance);
+
+            //2-Create a new timeline if necessary
+            if (!hasGoodTimeline && allowCreation)
             {
-                for (int level = line.cells.Count-2; level >= 0; level--)
+                bestLine = new TimeLine(input, timeLineSize);
+                lines.Add(bestLine);
+            }
+            //2-OR tune up the RF of the existing timeline
+            else if (allowLearning)
+            {
+                for (int i = 0; i < inputSize; i++)
+                {
+                    double e = input[i] - bestLine.receptiveField[i];
+                    bestLine.receptiveField[i] += parameterFFLearningRate * e;
+                }
+            }
+
+            //3-Activate the first cell of the winner line
+            bestLine.cells[0].isActive = true;
+
+            return bestLine;
+        }
+
+        public void PropagateActivity()
+        {
+            foreach (TimeLine line in lines)
+            {
+                for (int level = line.cells.Count - 2; level >= 0; level--)
                 {
                     line.cells[level + 1].isActive = line.cells[level].isActive;
                 }
@@ -133,7 +165,7 @@ namespace TimeCells
             bestDistance = double.PositiveInfinity;
             foreach (TimeLine line in lines)
             {
-                double cDistance = CDZNET.MathHelpers.distance(input, line.receptiveField);
+                double cDistance = distanceFx(input, line.receptiveField);
                 if (cDistance < bestDistance)
                 {
                     bestDistance = cDistance;
@@ -205,6 +237,36 @@ namespace TimeCells
                 return bestTimeLine.receptiveField;
             else
                 return new double[inputSize];
+        }
+
+        /// <summary>
+        /// Generate a prediction given the current state of the network
+        /// </summary>
+        /// <returns> A list of prediction and their score</returns>
+        public List<KeyValuePair<double[], double>> PredictAll()
+        {
+            double bestScore = 0;
+            List<KeyValuePair<double[], double>> predictions = new List<KeyValuePair<double[], double>>();
+            foreach (TimeLine line in lines)
+            {
+                double score = 0;
+                TimeCell presentCell = line.cells[0];
+                foreach (KeyValuePair<TimeCell, double> cell in presentCell.previous)
+                {
+                    if (cell.Key.isActive)
+                    {
+                        score += cell.Value;
+                    }
+                }
+                if (bestScore <= score)
+                {
+                    bestScore = score;
+                }
+
+                predictions.Add( new KeyValuePair<double[], double>(line.receptiveField, score) );
+            }
+            predictions.Sort((a, b) => a.Value.CompareTo( b.Value) );
+            return predictions;
         }
     }
 }
