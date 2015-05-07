@@ -16,7 +16,7 @@ namespace TimeCells
             this.receptiveField = receptiveField.Clone() as double[];
             for(int i=0;i<lineLength;i++)
             {
-                cells.Add(new TimeCell(i));
+                cells.Add(new TimeCell(i, this));
             }
         }
 

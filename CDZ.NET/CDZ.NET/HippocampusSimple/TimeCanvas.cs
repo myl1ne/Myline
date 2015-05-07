@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -31,6 +32,53 @@ namespace TimeCells
                 this.distanceFx = distanceFunction;
         }
 
+        public void Save(string filePath)
+        {
+            StreamWriter file = new StreamWriter(filePath);
+            //Write all the receptive fields on the first line    
+            string lineData = "";
+            foreach(TimeLine line in lines)
+            {
+                lineData += "(";
+                for(int i=0;i<line.receptiveField.Count();i++)
+                {
+                    lineData += line.receptiveField[i];
+                    if (i!=line.receptiveField.Count()-1)
+                        lineData+=",";
+                }
+                lineData += ")";
+
+                if (line != lines.Last())
+                    lineData += ",";
+            }
+            file.WriteLine(lineData);
+
+            //Then one line for each timeline
+            foreach (TimeLine line in lines)
+            {
+                lineData = ""; 
+                foreach(TimeCell cell in line.cells)
+                {
+                    lineData += "(";
+                    foreach(KeyValuePair< TimeCell, double > cellNext in cell.next)
+                    {
+                        lineData += "(";
+                        int pointToIndex = lines.IndexOf(cellNext.Key.parentLine);
+                        lineData += pointToIndex + "," + cellNext.Value;
+                        lineData += ")";
+                        if (cell.next.Last().Key != cellNext.Key)
+                            lineData += ",";
+                    }
+                    lineData += ")";
+
+                    if (line != lines.Last())
+                        lineData += ",";
+                }
+                file.WriteLine(lineData);
+            }
+            file.Close();
+        }
+
         public void Reset()
         {
             foreach(TimeLine l in lines)
@@ -38,6 +86,52 @@ namespace TimeCells
                 l.Reset();
             }
             activeLines.Clear();
+        }
+
+        public void Imprint(List<double[]> sequence)
+        { 
+            //First convert all the element to their respective timeline
+            List<TimeLine> tlSequence = new List<TimeLine>();
+            foreach (double[] item in sequence)
+            {
+                TimeLine bestLine;
+                double bestScore = 0.0;
+                bool hasGoodTimeline = FindBestLine(item, out bestLine, out bestScore);
+
+                //2-Create a new timeline if necessary
+                if (!hasGoodTimeline)
+                {
+                    bestLine = new TimeLine(item, timeLineSize);
+                    lines.Add(bestLine);
+                }
+                tlSequence.Add(bestLine);
+            }
+
+            //Second compute the relation among elements
+            for (int oldestIndex = 0; oldestIndex < tlSequence.Count; oldestIndex++)
+			{
+                int elementsBelow = Math.Min(timeLineSize, tlSequence.Count - oldestIndex);
+                for (int level = 1; level < elementsBelow; level++)
+                {
+                    try
+                    {
+                        tlSequence[oldestIndex].cells[level].next[tlSequence[oldestIndex + level].cells[0]] += 1;
+                    }
+                    catch (KeyNotFoundException)
+                    {
+                        tlSequence[oldestIndex].cells[level].next.Add(tlSequence[oldestIndex + level].cells[0], 1.0);
+                    }
+
+                    try
+                    {
+                        tlSequence[oldestIndex + level].cells[0].previous[tlSequence[oldestIndex].cells[level]] += 1;
+                    }
+                    catch (KeyNotFoundException)
+                    {
+                        tlSequence[oldestIndex + level].cells[0].previous.Add(tlSequence[oldestIndex].cells[level], 1.0);
+                    }
+                }
+			}
         }
 
         public void Train(List<double[]> inputs, ref List<double[]> predictions, ref List<double> predictionsError, ref double meanPredictionsError)

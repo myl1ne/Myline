@@ -46,43 +46,69 @@ namespace KaggleTaxis
             canvas.parameterLineCreationTreshold = 0.01;
             canvas.parameterFFLearningRate = 0;
 
-            //----------------------------------------------------------------------------------------------
-            //Train it
-            Stopwatch watch1 = new Stopwatch();
-            watch1.Start();
-            int EPOCH_TO_RUN = 1;
-            for (int iteration = 0; iteration < EPOCH_TO_RUN; iteration++)
+            //Try to imprint (fast training)
+            int imprintIteration = 0;
+            
+            Stopwatch watch2 = new Stopwatch();
+            watch2.Start();    
+            foreach (TaxiCourse course in trainSet)
             {
-                Stopwatch watch2 = new Stopwatch();
-                watch2.Start();
-                double avgSetError = 0;
-                int totalNaN = 0;
-                int currentIt = 0;
-                foreach(TaxiCourse course in trainSet)
+                canvas.Imprint(course.polyline);
+                imprintIteration++;
+                if (imprintIteration % 1000 == 0)
                 {
-                    canvas.Reset();
-                    List<double[]> predictedPolyline = new List<double[]>();
-                    List<double> errors = new List<double>();
-                    double meanError = 0.0;
-                    canvas.Train(course.polyline, ref predictedPolyline, ref errors, ref meanError);
-                    if (!double.IsNaN(meanError))
-                        avgSetError += meanError;
-                    else
-                        totalNaN++;
-
-                    currentIt++;
-                    if (currentIt%10000 == 0)
-                    {
-                        Console.WriteLine("Epoch done : " + Math.Floor(currentIt / (double)trainSet.Count) + "%");
-                    }
-                    //Console.WriteLine("Element error="+meanError);
+                    Console.WriteLine("Epoch done : " + Math.Floor(100*imprintIteration / (double)trainSet.Count) + "%");
                 }
-                avgSetError /= (trainSet.Count - totalNaN);
-                watch2.Stop();
-                Console.WriteLine("Training set (" + trainSet.Count + " elements) processed in " + watch2.Elapsed + ". Mean error=" + avgSetError);
             }
-            watch1.Stop();
-            Console.WriteLine("Training set (" + trainSet.Count + " elements) x " + EPOCH_TO_RUN + " epochs processed in " + watch1.Elapsed);
+            watch2.Stop();
+            Console.WriteLine("Training set (" + trainSet.Count + " elements) processed in " + watch2.Elapsed + ".");
+            canvas.Save("SavedCanvasImprint.csv");
+
+            ////----------------------------------------------------------------------------------------------
+            ////Create the network
+            //TimeCells.TimeCanvas canvas = new TimeCanvas(2, 50, null);
+            ////TimeCells.TimeCanvas canvas = new TimeCanvas(2, 50, HarvesineDistance);
+            //canvas.parameterLineCreationTreshold = 0.01;
+            //canvas.parameterFFLearningRate = 0;
+
+            ////----------------------------------------------------------------------------------------------
+            ////Train it
+            //Stopwatch watch1 = new Stopwatch();
+            //watch1.Start();
+            //int EPOCH_TO_RUN = 1;
+            //for (int iteration = 0; iteration < EPOCH_TO_RUN; iteration++)
+            //{
+            //    Stopwatch watch2 = new Stopwatch();
+            //    watch2.Start();
+            //    double avgSetError = 0;
+            //    int totalNaN = 0;
+            //    int currentIt = 0;
+            //    foreach(TaxiCourse course in trainSet)
+            //    {
+            //        canvas.Reset();
+            //        List<double[]> predictedPolyline = new List<double[]>();
+            //        List<double> errors = new List<double>();
+            //        double meanError = 0.0;
+            //        canvas.Train(course.polyline, ref predictedPolyline, ref errors, ref meanError);
+            //        if (!double.IsNaN(meanError))
+            //            avgSetError += meanError;
+            //        else
+            //            totalNaN++;
+
+            //        currentIt++;
+            //        if (currentIt%10000 == 0)
+            //        {
+            //            Console.WriteLine("Epoch done : " + Math.Floor(currentIt / (double)trainSet.Count) + "%");
+            //        }
+            //        //Console.WriteLine("Element error="+meanError);
+            //    }
+            //    avgSetError /= (trainSet.Count - totalNaN);
+            //    watch2.Stop();
+            //    Console.WriteLine("Training set (" + trainSet.Count + " elements) processed in " + watch2.Elapsed + ". Mean error=" + avgSetError);
+            //}
+            //watch1.Stop();
+            //Console.WriteLine("Training set (" + trainSet.Count + " elements) x " + EPOCH_TO_RUN + " epochs processed in " + watch1.Elapsed);
+            canvas.Save("SavedCanvas.csv");
 
             //----------------------------------------------------------------------------------------------
             //Generate the test results
