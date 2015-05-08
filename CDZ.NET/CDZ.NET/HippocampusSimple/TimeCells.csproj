@@ -4,15 +4,16 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{7785E7D6-6841-4F48-B9A2-3E7516972E17}</ProjectGuid>
+    <ProjectGuid>{1D567EBC-C16D-49DF-A6B5-AE20A18F0FEF}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>CDZ.NET.GUI</RootNamespace>
-    <AssemblyName>CDZ.NET.GUI</AssemblyName>
+    <RootNamespace>TimeCells</RootNamespace>
+    <AssemblyName>TimeCells</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -22,6 +23,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
@@ -29,14 +31,19 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject />
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Optimized|AnyCPU'">
     <OutputPath>bin\Optimized\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
+    <DefineConstants>
+    </DefineConstants>
     <Optimize>true</Optimize>
     <DebugType>pdbonly</DebugType>
-    <PlatformTarget>AnyCPU</PlatformTarget>
+    <PlatformTarget>x64</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
     <DebugSymbols>true</DebugSymbols>
@@ -58,18 +65,16 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Optimized|x64'">
     <OutputPath>bin\x64\Optimized\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
     <Optimize>true</Optimize>
     <DebugType>pdbonly</DebugType>
     <PlatformTarget>x64</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Drawing" />
-    <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -77,39 +82,14 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Helpers\ColorInterpolator.cs" />
-    <Compile Include="Helpers\GeneralExtensions.cs" />
-    <Compile Include="IONodeControls\CtrlIMMNode.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="IONodeControls\CtrlIMMNode.Designer.cs">
-      <DependentUpon>CtrlIMMNode.cs</DependentUpon>
-    </Compile>
-    <Compile Include="IONodeControls\CtrlIONode.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="IONodeControls\CtrlIONode.Designer.cs">
-      <DependentUpon>CtrlIONode.cs</DependentUpon>
-    </Compile>
-    <Compile Include="IONodeControls\CtrlSignal.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="IONodeControls\CtrlSignal.Designer.cs">
-      <DependentUpon>CtrlSignal.cs</DependentUpon>
-    </Compile>
-    <Compile Include="IONodeControls\IONodeExtensions.cs" />
+    <Compile Include="TaxiCourse.cs" />
+    <Compile Include="TimeCanvas.cs" />
+    <Compile Include="TimeCell.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="TimeLine.cs" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="IONodeControls\CtrlIMMNode.resx">
-      <DependentUpon>CtrlIMMNode.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="IONodeControls\CtrlIONode.resx">
-      <DependentUpon>CtrlIONode.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="IONodeControls\CtrlSignal.resx">
-      <DependentUpon>CtrlSignal.cs</DependentUpon>
-    </EmbeddedResource>
+    <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CDZ.NET\CDZ.NET.csproj">

@@ -30,13 +30,13 @@ namespace VowelWorldModel
                     (node as MMNodeLookupTable).learningRate = 0.5;
                     break;
 
-                case Model.Matlab:
-                    node = new CDZNET.Core.MMNodeMatLab(new CDZNET.Point2D(1, 1),            //This is the size of the output (so far not set in matlab case)
-                        "CA3",                                                              //This is the name of the variable corresponding to this node in Matlab
-                        "D:/robotology/src/Myline/CDZ.NET/CDZ.NET/CDZ.NET/Core/MM/Matlab",  //Path where the script is located
-                        "dummyConvergenceDivergence"                                        //name of the function/script
-                        );
-                    break;
+                //case Model.Matlab:
+                //    node = new CDZNET.Core.MMNodeMatLab(new CDZNET.Point2D(1, 1),            //This is the size of the output (so far not set in matlab case)
+                //        "CA3",                                                              //This is the name of the variable corresponding to this node in Matlab
+                //        "D:/robotology/src/Myline/CDZ.NET/CDZ.NET/CDZ.NET/Core/MM/Matlab",  //Path where the script is located
+                //        "dummyConvergenceDivergence"                                        //name of the function/script
+                //        );
+                //    break;
 
                 case Model.MWSOM:
                     node = new CDZNET.Core.MMNodeMWSOM(new CDZNET.Point2D(nbNeurons, nbNeurons));

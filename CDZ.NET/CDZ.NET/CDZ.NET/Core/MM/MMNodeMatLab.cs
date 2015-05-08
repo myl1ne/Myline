@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 namespace CDZNET.Core
 {
+#if MATLAB
     /// <summary>
     /// A multimodal node template.
     /// </summary>
@@ -142,4 +143,5 @@ namespace CDZNET.Core
 
         }
     }
+#endif
 }
