@@ -44,6 +44,7 @@ namespace VowelWorldModel
             world = new World(worldWidth, worldHeight, shapeCount, orientationVariability);
             world.Randomize(seedsNumber);
             getWorldVisualization();
+            dumpDatasetToFile(world.generateSaccadeDatasets(100, 3, 1)["train"], "vowelWorld.csv");
         }
 
         //---------------------LOG------------------
@@ -117,35 +118,46 @@ namespace VowelWorldModel
             //buttonTest.Enabled = true;
         }
 
+        enum WorldType { GistNSemantic, SemanticOnly, GistOnly, None };
         private void buttonTrain_Click(object sender, EventArgs e)
         {
-            //Generate the sets
-            int sampleCount = 2000;
-            Dictionary<string, List<Dictionary<string, double[,]>>> setsToEvaluate = world.generateSaccadeDatasets(sampleCount, retinaSize, saccadeSize);
-
-            //Choose the models to test
-            List<MMNodeFactory.Model> modelsToTest = new List<MMNodeFactory.Model>()
+            foreach (WorldType wType in Enum.GetValues(typeof(WorldType)))
             {
-                MMNodeFactory.Model.DeepBelief,
-                //MNNodeFactory.Model.LUT,
-                MMNodeFactory.Model.AFSOM,
-                //MNNodeFactory.Model.SOM,
-                ////MNNodeFactory.Model.MWSOM,
-                //MMNodeFactory.Model.MLP
-            };
+                //Generate the world
+                world.RULE_GIST_ENABLED = (wType == WorldType.GistNSemantic || wType == WorldType.GistOnly);
+                world.RULE_SEMANTIC_ENABLED = (wType == WorldType.GistNSemantic || wType == WorldType.SemanticOnly);
+                world.Randomize(seedsNumber);
+                getWorldVisualization();
 
-            //Vary the size of the trainingset
-            for (int itemToTrainOn = 100; itemToTrainOn <= setsToEvaluate["train"].Count; itemToTrainOn += (itemToTrainOn==100)?400:500)
-            {   
-                //Create
-                Dictionary<string, MMNode> models = createModels(modelsToTest);
+                //Generate the sets
+                int sampleCount = 1000;
+                Dictionary<string, List<Dictionary<string, double[,]>>> setsToEvaluate = world.generateSaccadeDatasets(sampleCount, retinaSize, saccadeSize);
 
-                //Train
-                setsToEvaluate["usedForTraining"] = setsToEvaluate["train"].GetRange(0, itemToTrainOn);
-                trainModels(models, setsToEvaluate["usedForTraining"]);
+                //Choose the models to test
+                List<MMNodeFactory.Model> modelsToTest = new List<MMNodeFactory.Model>()
+                {
+                    MMNodeFactory.Model.DeepBelief,
+                    //MNNodeFactory.Model.LUT,
+                    MMNodeFactory.Model.AFSOM,
+                    //MNNodeFactory.Model.SOM,
+                    ////MNNodeFactory.Model.MWSOM,
+                    //MMNodeFactory.Model.MLP
+                };
 
-                //Test
-                evaluateOnSets(models, setsToEvaluate, "testLog_"+ textBoxFileName.Text);
+                //Vary the size of the trainingset
+                //int itemToTrainOn = 100;
+                for (int itemToTrainOn = 100; itemToTrainOn <= setsToEvaluate["train"].Count; itemToTrainOn += (itemToTrainOn==100)?400:500)
+                {
+                    //Create
+                    Dictionary<string, MMNode> models = createModels(modelsToTest);
+
+                    //Train
+                    setsToEvaluate["usedForTraining"] = setsToEvaluate["train"].GetRange(0, itemToTrainOn);
+                    trainModels(models, setsToEvaluate["usedForTraining"]);
+
+                    //Test
+                    evaluateOnSets(models, setsToEvaluate, "testLog_" + textBoxFileName.Text, wType);
+                }
             }
             MessageBox.Show("Done !");
         }
@@ -160,7 +172,7 @@ namespace VowelWorldModel
         void dumpDatasetToFile(List<Dictionary<string, double[,]>> dataset, string fileName)
         {
             //Dump it into a file
-            StreamWriter file = new StreamWriter(textBoxFileName.Text);
+            StreamWriter file = new StreamWriter(fileName);
 
             //Write some metadata
             file.WriteLine("worldWidth\t" + worldWidth);
@@ -207,7 +219,8 @@ namespace VowelWorldModel
         {
             Dictionary<string, MMNode> models = new Dictionary<string, MMNode>();
 
-            for (int neuronsCount = 10; neuronsCount < 100; neuronsCount += 20)
+            int neuronsCount = 50;
+            //for (int neuronsCount = 10; neuronsCount < 100; neuronsCount += 20)
             {
                 foreach (MMNodeFactory.Model selectedModel in modelsToTrain)
                 {
@@ -303,7 +316,7 @@ namespace VowelWorldModel
         }
 
         bool hasWrittenHeaders = false;
-        void evaluateOnSets(Dictionary<string, MMNode> models, Dictionary<string, List<Dictionary<string, double[,]>>> sets, string logFile)
+        void evaluateOnSets(Dictionary<string, MMNode> models, Dictionary<string, List<Dictionary<string, double[,]>>> sets, string logFile, WorldType worldType)
         {
             Console.WriteLine(DateTime.Now + "\t" + "Starting to test log.");
 
@@ -322,6 +335,7 @@ namespace VowelWorldModel
                 file.WriteLine();
 
                 //write the headers
+                file.Write("WorldType,");
                 file.Write("Model,");
                 file.Write("SetName,");
                 file.Write("InvertedBits,");
@@ -429,6 +443,7 @@ namespace VowelWorldModel
                             //Dump the info
                             string line = "";
                             line +=
+                                worldType.ToString() + "," +
                                 modelName + "," +
                                 setName + "," +
                                 invertedBits + "," +

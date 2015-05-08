@@ -50,3 +50,5 @@ YarpCS/
 *.vcxproj
 *.cmake
 *.list
+*.csv
+CDZ.NET/Datasets/Kaggle Taxis/evaluation_script.r

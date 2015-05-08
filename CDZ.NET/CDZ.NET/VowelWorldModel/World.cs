@@ -11,6 +11,10 @@ namespace VowelWorldModel
 {
     class World
     {
+        public bool RULE_GIST_ENABLED = true;
+        public bool RULE_SEMANTIC_ENABLED = true;
+        public bool RULE_SYNTACTIC_ENABLED = true;
+
         Random rnd = new Random();
         public int Width { get { return cells.GetLength(0); } }
         public int Height { get { return cells.GetLength(1); } }
@@ -135,48 +139,68 @@ namespace VowelWorldModel
             //----------------------------------------------------------GIST - COLOR----------------------------------------------//
             //Compute the color based on theirs
             cells[i, j].colorValue = 0.0f;
-            foreach (Cell n in neighbors)
+            if (RULE_GIST_ENABLED)
             {
-                cells[i, j].colorValue += n.colorValue;
-            }
-            if (neighbors.Count == 0)
-            {
-                cells[i, j].colorValue = rnd.NextDouble();
+                foreach (Cell n in neighbors)
+                {
+                    cells[i, j].colorValue += n.colorValue;
+                }
+                if (neighbors.Count == 0)
+                {
+                    cells[i, j].colorValue = rnd.NextDouble();
+                }
+                else
+                {
+                    cells[i, j].colorValue /= (neighbors.Count);
+                    //Add some variability
+                    cells[i, j].colorValue += (rnd.NextDouble() * 0.2 - 0.1);
+                }
+                MathHelpers.Clamp(ref cells[i, j].colorValue, 0.0, 1.0);
             }
             else
             {
-                cells[i, j].colorValue /= (neighbors.Count);
-                //Add some variability
-                cells[i, j].colorValue +=  ( rnd.NextDouble() * 0.2 - 0.1 );
+                cells[i, j].colorValue = rnd.NextDouble();
             }
-            MathHelpers.Clamp(ref cells[i, j].colorValue, 0.0, 1.0);
+
             cells[i, j].colorCode = getColorCodeFromValue(cells[i, j].colorValue);
             //Debug.Log("Frequency= " + cells[i, j].frequency);
 
             //----------------------------------------------------------SEMANTIC - ORIENTATION----------------------------------------------//
             //Orientation is given by color/gist
-            if (cells[i, j].colorValue < 1 / 4.0)
+            if (RULE_SEMANTIC_ENABLED)
             {
-                cells[i, j].orientation = 0.0f;
-            }
-            else if (cells[i, j].colorValue < 1 / 2.0)
-            {
-                cells[i, j].orientation = 45.0f;
-            }
-            else if (cells[i, j].colorValue < 3 / 4.0)
-            {
-                cells[i, j].orientation = 90.0f;
+                if (cells[i, j].colorValue < 1 / 4.0)
+                {
+                    cells[i, j].orientation = 0.0f;
+                }
+                else if (cells[i, j].colorValue < 1 / 2.0)
+                {
+                    cells[i, j].orientation = 45.0f;
+                }
+                else if (cells[i, j].colorValue < 3 / 4.0)
+                {
+                    cells[i, j].orientation = 90.0f;
+                }
+                else
+                {
+                    cells[i, j].orientation = 135.0f;
+                }
+                cells[i, j].orientation += (rnd.NextDouble() * orientationVariability - orientationVariability / 2.0);
             }
             else
-            {
-                cells[i, j].orientation = 135.0f;
-            }
-            cells[i, j].orientation += (rnd.NextDouble() * orientationVariability - orientationVariability/2.0);
+                cells[i, j].orientation = rnd.NextDouble() * 135.0f;
 
             //----------------------------------------------------------SHAPE----------------------------------------------//
             //Shape is defined by syntactic rule
-            //rnd for now
-            cells[i, j].shape = rnd.Next(0, shapesCount);
+            if (RULE_SYNTACTIC_ENABLED)
+            {
+                //TRND IN BOTH CASES FOR NOW
+                cells[i, j].shape = rnd.Next(0, shapesCount);
+            }
+            else
+            {
+                cells[i, j].shape = rnd.Next(0, shapesCount);
+            }
         }
 
         public Dictionary<string, Bitmap> toImages()
