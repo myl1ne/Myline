@@ -14,101 +14,72 @@ namespace KaggleTaxis
     {
 
         static void Main(string[] args)
-        {
-            //----------------------------------------------------------------------------------------------
-            //Load the training set
-            double[] minBound = new double[2], maxBound = new double[2];
-            double avgTrajectoryLength = 0.0;
-            List<TaxiCourse> trainSet = LoadDataSet("C:\\Users\\Stephane\\Documents\\GitHub\\Myline\\Datasets\\Kaggle Taxis\\train.csv", ref minBound, ref maxBound, ref avgTrajectoryLength, -1);
-            Console.WriteLine("Range is: Lattitude=" + (maxBound[0] - minBound[0]) + "\t Longitude=" + (maxBound[1] - minBound[1]));
-            Console.WriteLine("MinMax are: Lattitude=" + maxBound[0] + "/" + minBound[0] + "\t Longitude=" + maxBound[1] + "/" + minBound[1]);
-
-            double[] minBoundTest = null, maxBoundTest = null;
-            double avgTrajectoryLengthTest = 0.0;
-            List<TaxiCourse> testSet = LoadDataSet("C:\\Users\\Stephane\\Documents\\GitHub\\Myline\\Datasets\\Kaggle Taxis\\test.csv", ref minBoundTest, ref maxBoundTest, ref avgTrajectoryLengthTest, - 1);
-
-            StreamWriter stats = new StreamWriter("stats.txt");
-            stats.WriteLine("Min " + minBound[0] + " " + minBound[1]);
-            stats.WriteLine("Max " + maxBound[0] + " " + maxBound[1]);
-            stats.WriteLine("Lines " + trainSet.Count);
-            stats.Close();
-
-            //----------------------------------------------------------------------------------------------
-            //Prepare the data
-            //ScaleTrajectoryData(trainSet, minBound, maxBound);
-            //ScaleTrajectoryData(testSet, minBound, maxBound);
-            AddTerminalSymbol(trainSet, new double[] { 999, 999 });
-
+        {            
             //----------------------------------------------------------------------------------------------
             //Create the network
-            TimeCells.TimeCanvas canvas = new TimeCanvas(2, 50, null);
+            int timelineSize = 50;
+            TimeCells.TimeCanvas canvas = new TimeCanvas(2, timelineSize, null);
             //TimeCells.TimeCanvas canvas = new TimeCanvas(2, 50, HarvesineDistance);
             canvas.parameterLineCreationTreshold = 0.01;
             canvas.parameterFFLearningRate = 0;
 
-            //Try to imprint (fast training)
-            int imprintIteration = 0;
-            
-            Stopwatch watch2 = new Stopwatch();
-            watch2.Start();    
-            foreach (TaxiCourse course in trainSet)
+            bool doTraining = false;
+            double avgTrajectoryLength = timelineSize;
+            //----------------------------------------------------------------------------------------------
+            //Load the training set
+            if (doTraining)
             {
-                canvas.Imprint(course.polyline);
-                imprintIteration++;
-                if (imprintIteration % 1000 == 0)
+                double[] minBound = new double[2], maxBound = new double[2];
+                //List<TaxiCourse> trainSet = LoadDataSet("C:\\Users\\Stephane\\Documents\\GitHub\\Myline\\Datasets\\Kaggle Taxis\\train.csv", ref minBound, ref maxBound, ref avgTrajectoryLength, -1);
+                List<TaxiCourse> trainSet = LoadDataSet("D:\\robotology\\src\\Myline\\CDZ.NET\\Datasets\\Kaggle Taxis\\train.csv", ref minBound, ref maxBound, ref avgTrajectoryLength, -1);
+                Console.WriteLine("Range is: Lattitude=" + (maxBound[0] - minBound[0]) + "\t Longitude=" + (maxBound[1] - minBound[1]));
+                Console.WriteLine("MinMax are: Lattitude=" + maxBound[0] + "/" + minBound[0] + "\t Longitude=" + maxBound[1] + "/" + minBound[1]);
+
+
+                //List<TaxiCourse> testSet = LoadDataSet("C:\\Users\\Stephane\\Documents\\GitHub\\Myline\\Datasets\\Kaggle Taxis\\test.csv", ref minBoundTest, ref maxBoundTest, ref avgTrajectoryLengthTest, -1);
+
+                StreamWriter stats = new StreamWriter("stats.txt");
+                stats.WriteLine("Min " + minBound[0] + " " + minBound[1]);
+                stats.WriteLine("Max " + maxBound[0] + " " + maxBound[1]);
+                stats.WriteLine("Lines " + trainSet.Count);
+                stats.Close();
+
+                //----------------------------------------------------------------------------------------------
+                //Prepare the data
+                //ScaleTrajectoryData(trainSet, minBound, maxBound);
+                //ScaleTrajectoryData(testSet, minBound, maxBound);
+                AddTerminalSymbol(trainSet, new double[] { 999, 999 });
+
+                //Try to imprint (fast training)
+                int imprintIteration = 0;
+
+                Stopwatch watch2 = new Stopwatch();
+                watch2.Start();
+                foreach (TaxiCourse course in trainSet)
                 {
-                    Console.WriteLine("Epoch done : " + Math.Floor(100*imprintIteration / (double)trainSet.Count) + "%");
+                    canvas.Imprint(course.polyline);
+                    imprintIteration++;
+                    if (imprintIteration % 1000 == 0)
+                    {
+                        Console.WriteLine("Epoch done : " + Math.Floor(100 * imprintIteration / (double)trainSet.Count) + "%");
+                    }
                 }
+                watch2.Stop();
+                Console.WriteLine("Training set (" + trainSet.Count + " elements) processed in " + watch2.Elapsed + ".");
+                canvas.Save("SavedCanvas.csv");
             }
-            watch2.Stop();
-            Console.WriteLine("Training set (" + trainSet.Count + " elements) processed in " + watch2.Elapsed + ".");
-            canvas.Save("SavedCanvasImprint.csv");
+            else //if (false) 
+            {
+                Console.WriteLine("Loading previously learnt canvas.");
+                canvas.Load("SavedCanvas.csv");
+                Console.WriteLine("Loading complete.");
+            }
 
-            ////----------------------------------------------------------------------------------------------
-            ////Create the network
-            //TimeCells.TimeCanvas canvas = new TimeCanvas(2, 50, null);
-            ////TimeCells.TimeCanvas canvas = new TimeCanvas(2, 50, HarvesineDistance);
-            //canvas.parameterLineCreationTreshold = 0.01;
-            //canvas.parameterFFLearningRate = 0;
-
-            ////----------------------------------------------------------------------------------------------
-            ////Train it
-            //Stopwatch watch1 = new Stopwatch();
-            //watch1.Start();
-            //int EPOCH_TO_RUN = 1;
-            //for (int iteration = 0; iteration < EPOCH_TO_RUN; iteration++)
-            //{
-            //    Stopwatch watch2 = new Stopwatch();
-            //    watch2.Start();
-            //    double avgSetError = 0;
-            //    int totalNaN = 0;
-            //    int currentIt = 0;
-            //    foreach(TaxiCourse course in trainSet)
-            //    {
-            //        canvas.Reset();
-            //        List<double[]> predictedPolyline = new List<double[]>();
-            //        List<double> errors = new List<double>();
-            //        double meanError = 0.0;
-            //        canvas.Train(course.polyline, ref predictedPolyline, ref errors, ref meanError);
-            //        if (!double.IsNaN(meanError))
-            //            avgSetError += meanError;
-            //        else
-            //            totalNaN++;
-
-            //        currentIt++;
-            //        if (currentIt%10000 == 0)
-            //        {
-            //            Console.WriteLine("Epoch done : " + Math.Floor(currentIt / (double)trainSet.Count) + "%");
-            //        }
-            //        //Console.WriteLine("Element error="+meanError);
-            //    }
-            //    avgSetError /= (trainSet.Count - totalNaN);
-            //    watch2.Stop();
-            //    Console.WriteLine("Training set (" + trainSet.Count + " elements) processed in " + watch2.Elapsed + ". Mean error=" + avgSetError);
-            //}
-            //watch1.Stop();
-            //Console.WriteLine("Training set (" + trainSet.Count + " elements) x " + EPOCH_TO_RUN + " epochs processed in " + watch1.Elapsed);
-            canvas.Save("SavedCanvas.csv");
+            //----------------------------------------------------------------------------------------------
+            //Load the test set
+            double[] minBoundTest = null, maxBoundTest = null;
+            double avgTrajectoryLengthTest = 0.0;
+            List<TaxiCourse> testSet = LoadDataSet("D:\\robotology\\src\\Myline\\CDZ.NET\\Datasets\\Kaggle Taxis\\test.csv", ref minBoundTest, ref maxBoundTest, ref avgTrajectoryLengthTest, -1);
 
             //----------------------------------------------------------------------------------------------
             //Generate the test results

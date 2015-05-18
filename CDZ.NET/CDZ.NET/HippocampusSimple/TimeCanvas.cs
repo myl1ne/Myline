@@ -35,6 +35,8 @@ namespace TimeCells
         public void Save(string filePath)
         {
             StreamWriter file = new StreamWriter(filePath);
+            file.WriteLine(timeLineSize);
+
             //Write all the receptive fields on the first line    
             string lineData = "";
             foreach(TimeLine line in lines)
@@ -77,6 +79,71 @@ namespace TimeCells
                 file.WriteLine(lineData);
             }
             file.Close();
+        }
+
+        public bool Load(string filepath)
+        {
+            StreamReader file = new StreamReader(filepath);
+            bool isFine = true;
+
+            lines = new List<TimeLine>();
+            activeLines = new List<TimeLine>();
+            timeLineSize = Convert.ToInt16(file.ReadLine());
+            string patternsLine = file.ReadLine();
+            string[] patterns = patternsLine.Split(new string[] { "(","),(", ")" }, StringSplitOptions.RemoveEmptyEntries);
+            int patternsSize = -1;
+            foreach(string pattern in patterns)
+            {
+                string[] elements = pattern.Split(new string[] { "," }, StringSplitOptions.RemoveEmptyEntries);
+                if (patternsSize != -1 && patternsSize != elements.Count())
+                    throw new Exception("Inconsistancy in the patterns size.");
+                patternsSize = elements.Count();
+
+                double[] dbPattern = new double[patternsSize];
+                for (int i = 0; i < patternsSize; i++)
+			    {
+                    dbPattern[i] = Convert.ToDouble(elements[i]);
+			    }
+                lines.Add(new TimeLine(dbPattern, timeLineSize));       
+            }
+
+            //Then one line for each timeline
+            int lineNumber = 0;
+            foreach (TimeLine line in lines)
+            {
+                string lineData = file.ReadLine();
+                string[] weights = lineData.Split(new string[] { "()","((", ")),((", "))" }, StringSplitOptions.RemoveEmptyEntries);
+
+                for (int i = 0; i < line.cells.Count; i++)
+                {
+                    string[] splitWeights = weights[i].Split(new string[] {"),("}, StringSplitOptions.RemoveEmptyEntries);
+                    if (splitWeights[0] == ",")
+                        continue;
+
+                    foreach (string weight in splitWeights)
+                    {
+                        string[] finallySplitWeight = weight.Split(new string[] { "," }, StringSplitOptions.RemoveEmptyEntries);
+                        int targetIndex = Convert.ToInt16(finallySplitWeight[0]);
+                        double targetWeight = Convert.ToDouble(finallySplitWeight[1]);
+
+                        TimeCell originCell = line.cells[i];
+                        TimeCell targetCell = lines[targetIndex].cells[0];
+                        originCell.next.Add(targetCell, targetWeight);
+                        try
+                        {
+                            targetCell.previous[originCell] += 1;
+                        }
+                        catch (KeyNotFoundException)
+                        {
+                            targetCell.previous.Add(originCell, 1);
+                        }
+                    }
+                }
+                lineNumber++;
+                Console.WriteLine("Line=" + lineNumber + "/" + lines.Count);
+            }
+            file.Close();
+            return isFine;
         }
 
         public void Reset()
@@ -360,6 +427,7 @@ namespace TimeCells
                 predictions.Add( new KeyValuePair<double[], double>(line.receptiveField, score) );
             }
             predictions.Sort((a, b) => a.Value.CompareTo( b.Value) );
+            predictions.Reverse();
             return predictions;
         }
     }

@@ -28,32 +28,37 @@ namespace TimeCells
 
         static void Main(string[] args)
         {
-            double[] a = { 1, 0, 0, 0, 0 };
-            double[] b = { 0, 1, 0, 0, 0 };
-            double[] c = { 0, 0, 1, 0, 0 };
-            double[] d = { 0, 0, 0, 1, 0 };
-            double[] e = { 0, 0, 0, 0, 1 };
+            Dictionary<char, double[]> c;
+            Dictionary< double[], char > c2;
+            formLetters(out c, out c2);
+            //double[] a = { 1, 0, 0, 0, 0 };
+            //double[] b = { 0, 1, 0, 0, 0 };
+            //double[] c = { 0, 0, 1, 0, 0 };
+            //...
 
-            Sequence abcde = new Sequence() { a, b, c, d, e };
-            Sequence ebcda = new Sequence() { e, b, c, d, a };
-            Sequence abddc = new Sequence() { a, b, d, d, c };
-            Sequence ab = new Sequence()    { a, b };
-            Sequence cd = new Sequence()    { c, d };
+            List<Sequence> sequenceGoalDirected = new List<Sequence>() 
+            { 
+                new Sequence() { c['c'], c['g'], c['k'], c['j'], c['i']  },
+                new Sequence() { c['c'], c['g'], c['k'], c['o'], c['s'] },
+                new Sequence() { c['c'], c['g'], c['k'], c['l'], c['m'] }            
+            };
 
-            List<Sequence> sequencesSet = new List<Sequence>() { ab, cd, abcde, ebcda, abddc };
-            
-            //Note: Erreur a la troisieme lettre. Le reseau ne sait pas ce qui vient apres "ab", c'est normal.
-            //Il faut detecter ce genre d'erreur pour segmenter les sous sequences.
-            //Par contre, le reseau corrige parfaitement une fois desambiguise (la 5eme lettre est correcte)
+            List<Sequence> sequenceShortcuts = new List<Sequence>() 
+            { 
+                new Sequence() { c['a'], c['b'], c['c'], c['g'], c['k'], c['o'], c['s'], c['t'], c['u']  },
+                new Sequence() { c['i'], c['j'], c['k'], c['l'], c['m'], c['p'], c['u'], c['t'], c['s'], c['r'], c['q']  },
+                new Sequence() { c['a'], c['f'], c['i'], c['n'], c['q'] },
+                new Sequence() { c['m'], c['h'], c['e'], c['d'], c['c'], c['b'], c['a'], c['f'], c['i'] }            
+            };
 
 
-            TimeCanvas canvas = new TimeCanvas(5,7);
-            for (int i = 0; i < 500000; i++)
+            TimeCanvas canvas = new TimeCanvas(25,7);
+            for (int i = 0; i < 5; i++)
             {
-                foreach (Sequence s in sequencesSet)
+                foreach (Sequence s in sequenceGoalDirected)
                 {
                     bool training = true;
-                    string errorMsg = "\n\n Sequence \n";
+                    string errorMsg = "\n\n ---------------------------------------- \n Sequence \n";
                     double seqMeanError = 0.0;
 
                     canvas.Reset();
@@ -61,13 +66,18 @@ namespace TimeCells
                     {
                         if (item != s.First())
                         {
-                            double[] prediction = canvas.Predict();
+                            List<KeyValuePair<double[], double> > predictions = canvas.PredictAll();
                             double[] reality = item;
-                            double itemError = CDZNET.MathHelpers.distance(prediction, reality);
+                            double itemError = CDZNET.MathHelpers.distance(predictions.First().Key, reality);
                             seqMeanError += itemError;
-                            errorMsg += "Error = " + itemError + "\n";
-                            errorMsg += "Reality " + Convert(reality) + "\n ";
-                            errorMsg += "Predict " + Convert(prediction) + "\n \n ";
+                            errorMsg += "Reality \t" + c2[reality] + "\t";
+                            //errorMsg += "Predict \t"  + Convert(prediction, c2) + "\t";
+                            errorMsg += "Predict \t";
+                            foreach(KeyValuePair<double[], double> pre in predictions)
+                            {
+                                errorMsg += Convert(pre.Key, c2) + "(" + pre.Value + ")" + "\t";
+                            }
+                            errorMsg += "\nError   \t " + itemError + "\n";
                         }
                         if (training)
                             canvas.Train(item);
@@ -75,6 +85,38 @@ namespace TimeCells
                     Console.WriteLine(errorMsg);
                 }
             }
+            Console.WriteLine("Training over.");
+        }
+
+        static void formLetters(out Dictionary< char, double[] > char2code, out Dictionary< double[], char > code2char)
+        {
+            char2code = new Dictionary<char, double[]>();
+            code2char = new Dictionary<double[], char>();
+
+            for(char c = 'a'; c<'z';c++)
+            {
+                double[] code = new double[25];
+                for(int i=0;i<25;i++)
+                {
+                    if (i == (c - 'a'))
+                        code[i] = 1;
+                    else
+                        code[i] = 0;
+                }
+                char2code[c] = code;
+                code2char[code] = c;
+            }
+        }
+        static char Convert(double[] d, Dictionary<double[], char> code2char)
+        {
+            //find the closest
+            foreach(double[] real in code2char.Keys)
+            {
+                if (real.SequenceEqual(d))
+                    return code2char[real];
+            }
+
+            return '#';      
         }
 
         static string Convert(double[] d)
