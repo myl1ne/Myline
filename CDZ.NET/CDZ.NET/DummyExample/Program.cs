@@ -8,6 +8,9 @@ namespace TimeCells
 {
     class Program
     {
+        public static Dictionary<char, double[]> c;
+        public static Dictionary<double[], char> c2;
+
         class Sequence : List<double[]>
         {
             public string ToReadable()
@@ -28,8 +31,7 @@ namespace TimeCells
 
         static void Main(string[] args)
         {
-            Dictionary<char, double[]> c;
-            Dictionary< double[], char > c2;
+
             formLetters(out c, out c2);
             //double[] a = { 1, 0, 0, 0, 0 };
             //double[] b = { 0, 1, 0, 0, 0 };
@@ -57,51 +59,57 @@ namespace TimeCells
                 new Sequence() { c['m'], c['h'], c['e'], c['d'], c['c'], c['b'], c['a'], c['f'], c['i'] }            
             };
 
-            List<Sequence> setToUse = sequenceTestground;
+            List<Sequence> setToUse = sequenceShortcuts;
 
-            TimeCanvas canvas = new TimeCanvas(25,7);
-            for (int i = 0; i < 5; i++)
-            {
-                foreach (Sequence s in setToUse)
-                {
-                    bool training = true;
-                    string errorMsg = "\n\n ---------------------------------------- \n Sequence \n";
-                    double seqMeanError = 0.0;
-
-                    canvas.Reset();
-                    foreach (double[] item in s)
-                    {
-                        if (item != s.First())
-                        {
-                            List<KeyValuePair<double[], double> > predictions = canvas.PredictAll();
-                            double[] reality = item;
-                            double itemError = CDZNET.MathHelpers.distance(predictions.First().Key, reality);
-                            seqMeanError += itemError;
-                            errorMsg += "Reality \t" + c2[reality] + "\t";
-                            //errorMsg += "Predict \t"  + Convert(prediction, c2) + "\t";
-                            errorMsg += "Predict \t";
-                            foreach(KeyValuePair<double[], double> pre in predictions)
-                            {
-                                errorMsg += Convert(pre.Key, c2) + "(" + pre.Value + ")" + "\t";
-                            }
-                            errorMsg += "\nError   \t " + itemError + "\n";
-                        }
-                        if (training)
-                            canvas.Train(item);
-                    }
-                    Console.WriteLine(errorMsg);
-                }
-            }
-            canvas.Save("debug.csv");
+            Console.WriteLine("Training...");
+            TimeCanvas canvas;
+            trainImprint(out canvas, setToUse, 5);
             Console.WriteLine("Training over.");
 
+            foreach (Sequence s in setToUse)
+            {
+                string errorMsg = "\n\n ---------------------------------------- \n Sequence \n";
+                double seqMeanError = 0.0;
+
+                canvas.Reset();
+                foreach (double[] item in s)
+                {
+                    if (item != s.First())
+                    {
+                        List<KeyValuePair<double[], double>> predictions = canvas.PredictAll();
+                        double[] reality = item;
+                        double itemError = CDZNET.MathHelpers.distance(predictions.First().Key, reality);
+                        seqMeanError += itemError;
+                        errorMsg += "ActiveCells=" + canvas.getActiveCells().Count;
+                        errorMsg += "Reality \t" + c2[reality] + "\t";
+                        //errorMsg += "Predict \t"  + Convert(prediction, c2) + "\t";
+                        errorMsg += "Predict \t";
+                        foreach (KeyValuePair<double[], double> pre in predictions)
+                        {
+                            errorMsg += Convert(pre.Key, c2) + "(" + pre.Value + ")" + "\t";
+                        }
+                        errorMsg += "\nError   \t " + itemError + "\n";
+                    }
+                    canvas.PresentInput(item, false, false);
+                    canvas.PropagateActivity();
+                }
+                Console.WriteLine(errorMsg);
+            }
+
             //Test the pathfinding
+            List<Sequence> pathToTest = new List<Sequence>
+            {
+                new Sequence{c['q'], c['o']},
+                //new Sequence{c['a'], c['k']},
+                //new Sequence{c['f'], c['r']}
+            };
+
             Console.WriteLine("\n------------------\nFinding paths...");
-            foreach (Sequence seq in setToUse)
+            foreach (Sequence seq in pathToTest)
             {
                 Console.WriteLine("From " + Convert(seq.First(), c2) + " to " + Convert(seq.Last(), c2));
                 List<TimeLine> path;
-                bool pathFound = canvas.findPath(seq.First(), seq.Last(), out path);
+                bool pathFound = canvas.findPath(seq.First(), seq.Last(), out path, c2);
                 //canvas.findPath(c['a'], c['d'], out path);
                 string pathStr = "Path = ";
                 foreach(TimeLine pathElement in path)
@@ -114,6 +122,36 @@ namespace TimeCells
             } 
 
             Console.WriteLine("Finding paths, over.");
+        }
+
+        static void trainImprint(out TimeCanvas canvas, List<Sequence> trainSet, int iterations)
+        {
+            canvas = new TimeCanvas(25, 7);
+            bool bidirectional = true;
+            for (int i = 0; i < iterations; i++)
+            {
+                foreach (Sequence s in trainSet)
+                {
+                    canvas.Imprint(s, bidirectional);
+                }
+            }
+            canvas.Save("debugImprint.csv");
+        }
+        static void trainNormal(out TimeCanvas canvas, List<Sequence> trainSet, int iterations)
+        {
+            canvas = new TimeCanvas(25, 7);
+            for (int i = 0; i < iterations; i++)
+            {
+                foreach (Sequence s in trainSet)
+                {
+                    canvas.Reset();
+                    foreach (double[] item in s)
+                    {
+                        canvas.Train(item);
+                    }
+                }
+            }
+            canvas.Save("debugNormal.csv");
         }
 
         static void formLetters(out Dictionary< char, double[] > char2code, out Dictionary< double[], char > code2char)

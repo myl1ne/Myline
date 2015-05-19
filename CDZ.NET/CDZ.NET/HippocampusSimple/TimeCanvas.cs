@@ -163,7 +163,7 @@ namespace TimeCells
             activeLines.Clear();
         }
 
-        public void Imprint(List<double[]> sequence)
+        public void Imprint(List<double[]> sequence, bool bidirectional = false)
         { 
             //First convert all the element to their respective timeline
             List<TimeLine> tlSequence = new List<TimeLine>();
@@ -207,6 +207,13 @@ namespace TimeCells
                     }
                 }
 			}
+
+            if (bidirectional)
+            {
+                List<double[]> reversedSequence = new List<double[]>(sequence);
+                reversedSequence.Reverse();
+                Imprint(reversedSequence, false);
+            }
         }
 
         public void Train(List<double[]> inputs, ref List<double[]> predictions, ref List<double> predictionsError, ref double meanPredictionsError)
@@ -321,6 +328,20 @@ namespace TimeCells
             }
         }
 
+        public List<TimeCell> getActiveCells()
+        {
+            List<TimeCell> activeCells = new List<TimeCell>();
+            foreach (TimeLine line in lines)
+            {
+                foreach(TimeCell cell in line.cells)
+                {
+                    if (cell.isActive)
+                        activeCells.Add(cell);
+                }
+            }
+            return activeCells;
+        }
+
         /// <summary>
         /// Find the best matching timeline for a given input.
         /// </summary>
@@ -387,13 +408,13 @@ namespace TimeCells
             Dictionary<TimeLine, double> predictions = new Dictionary<TimeLine, double>();
             foreach(TimeLine line in lines)
             {
-                predictions[line] = 0;
+                predictions[line] = 1;
                 TimeCell presentCell = line.cells[0];
                 foreach (KeyValuePair<TimeCell,double> cell in presentCell.previous)
                 {
                     if (cell.Key.isActive)
                     {
-                        predictions[line] += cell.Value;
+                        predictions[line] *= cell.Value;
                     }
                 }
                 if (bestTimeLine == null || predictions[bestTimeLine]<predictions[line])
@@ -414,31 +435,35 @@ namespace TimeCells
         /// <returns> A list of prediction and their score</returns>
         public List<KeyValuePair<double[], double>> PredictAll()
         {
-            double bestScore = 0;
             List<KeyValuePair<double[], double>> predictions = new List<KeyValuePair<double[], double>>();
             foreach (TimeLine line in lines)
             {
-                double score = 0;
+                double score = 1;
                 TimeCell presentCell = line.cells[0];
                 foreach (KeyValuePair<TimeCell, double> cell in presentCell.previous)
                 {
                     if (cell.Key.isActive)
                     {
-                        score += cell.Value;
+                        score *= cell.Value;
                     }
                 }
-                if (bestScore <= score)
-                {
-                    bestScore = score;
-                }
-
                 predictions.Add( new KeyValuePair<double[], double>(line.receptiveField, score) );
             }
             predictions.Sort((a, b) => a.Value.CompareTo( b.Value) );
             predictions.Reverse();
             return predictions;
         }
+        static char DEBUGConvert(double[] d, Dictionary<double[], char> code2char)
+        {
+            //find the closest
+            foreach (double[] real in code2char.Keys)
+            {
+                if (real.SequenceEqual(d))
+                    return code2char[real];
+            }
 
+            return '#';
+        }
         /// <summary>
         /// Find the shortest (?) path between 2 elements
         /// </summary>
@@ -446,7 +471,7 @@ namespace TimeCells
         /// <param name="end">Goal to reach</param>
         /// <param name="path">Oredered path of TimeLines to follow (take the receptive field of each for points)</param>
         /// <returns>true if a path was found, false if not</returns>
-        public bool findPath(double[] start, double[] end, out List<TimeLine> path)
+        public bool findPath(double[] start, double[] end, out List<TimeLine> path, Dictionary<double[], char> c2)
         {
             path = new List<TimeLine>();
 
@@ -484,13 +509,15 @@ namespace TimeCells
             {
                 TimeCell bestPredecessor = null;
                 int bestStartingLevel = timeLineSize;
+                char DEBUGCurrentLine = DEBUGConvert(currentTimeLine.receptiveField, c2);
 
                 // propagate the current state back in time
                 for (int currentIndexOnLine = 0; currentIndexOnLine < timeLineSize; currentIndexOnLine++)
                 {
-                    //Find the next cell that will lead to the shortest path to the goal                
+                    //Find the next cell that will lead to the shortest path to the goal
                     foreach (KeyValuePair<TimeCell, double> nextProbas in currentTimeLine.cells[currentIndexOnLine].next)
                     {
+                        char DEBUGConnectedLine = DEBUGConvert(nextProbas.Key.parentLine.receptiveField, c2);
                         //If the current state leads to a goal-leading line && this leading line is the shortest so far
                         if (leadingLines.Contains(nextProbas.Key.parentLine))
                         {
