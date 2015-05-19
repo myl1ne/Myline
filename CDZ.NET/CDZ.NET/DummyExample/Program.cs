@@ -92,6 +92,7 @@ namespace TimeCells
                     Console.WriteLine(errorMsg);
                 }
             }
+            canvas.Save("debug.csv");
             Console.WriteLine("Training over.");
 
             //Test the pathfinding
@@ -101,7 +102,7 @@ namespace TimeCells
                 Console.WriteLine("From " + Convert(seq.First(), c2) + " to " + Convert(seq.Last(), c2));
                 List<TimeLine> path;
                 bool pathFound = canvas.findPath(seq.First(), seq.Last(), out path);
-                canvas.findPath(c['a'], c['d'], out path);
+                //canvas.findPath(c['a'], c['d'], out path);
                 string pathStr = "Path = ";
                 foreach(TimeLine pathElement in path)
                 {

@@ -474,6 +474,8 @@ namespace TimeCells
                 leadingCells[leadingCell.Key.parentLine] = leadingCell.Key;
             }
 
+            List<TimeLine> initialLeadingLines = new List<TimeLine>(leadingLines);
+
             //Main idea: Keep the predecessors activated & propagate the current state back in time
             TimeLine currentTimeLine = bestLineStart;
             path.Add(currentTimeLine);
@@ -482,6 +484,7 @@ namespace TimeCells
             {
                 TimeCell bestPredecessor = null;
                 int bestStartingLevel = timeLineSize;
+
                 // propagate the current state back in time
                 for (int currentIndexOnLine = 0; currentIndexOnLine < timeLineSize; currentIndexOnLine++)
                 {
@@ -506,8 +509,14 @@ namespace TimeCells
                     currentTimeLine = bestPredecessor.parentLine;
                     path.Add(currentTimeLine);
 
+                    //THIS IS SUPER NOT OPTIMAL
+                    if (initialLeadingLines.Count != leadingLines.Count)
+                    {
+                        leadingLines = new List<TimeLine>(initialLeadingLines);
+                    }
+
                     //We detect the end of the path by checking that the predecessor is just 1 element behind in time
-                    if (bestPredecessor.level == 1)
+                    else if (bestPredecessor.level == 1)
                     {
                         path.Add(bestLineEnd);
                         isPathComplete = true;
@@ -515,6 +524,14 @@ namespace TimeCells
                 }
                 else
                 {
+                    //Workaround the 1 element problem
+                    if (leadingLines.Contains(currentTimeLine))
+                    {
+                        path.Add(bestLineEnd);
+                        isPathComplete = true;
+                        break;
+                    }
+
                     //Problem: there is no 2 overlapping paths
                     //We expend the leading line of one level (take the leading lines leading to those leading lines)
                     List<TimeLine> completedLines = new List<TimeLine>(leadingLines);
@@ -522,7 +539,7 @@ namespace TimeCells
                     {
                         foreach (KeyValuePair<TimeCell, double> leadingCell in L.cells[0].previous)
                         {
-                            if (!completedLines.Contains(leadingCell.Key.parentLine))
+                            if (!leadingLines.Contains(leadingCell.Key.parentLine))
                             {
                                 completedLines.Add(leadingCell.Key.parentLine);
                                 leadingCells[leadingCell.Key.parentLine] = leadingCell.Key;
