@@ -35,6 +35,12 @@ namespace TimeCells
             //double[] b = { 0, 1, 0, 0, 0 };
             //double[] c = { 0, 0, 1, 0, 0 };
             //...
+            List<Sequence> sequenceTestground = new List<Sequence>() 
+            { 
+                new Sequence() { c['a'], c['b'] },         
+                new Sequence() { c['b'], c['c'] },         
+                new Sequence() { c['c'], c['d'] },           
+            };
 
             List<Sequence> sequenceGoalDirected = new List<Sequence>() 
             { 
@@ -51,11 +57,12 @@ namespace TimeCells
                 new Sequence() { c['m'], c['h'], c['e'], c['d'], c['c'], c['b'], c['a'], c['f'], c['i'] }            
             };
 
+            List<Sequence> setToUse = sequenceTestground;
 
             TimeCanvas canvas = new TimeCanvas(25,7);
             for (int i = 0; i < 5; i++)
             {
-                foreach (Sequence s in sequenceGoalDirected)
+                foreach (Sequence s in setToUse)
                 {
                     bool training = true;
                     string errorMsg = "\n\n ---------------------------------------- \n Sequence \n";
@@ -86,6 +93,26 @@ namespace TimeCells
                 }
             }
             Console.WriteLine("Training over.");
+
+            //Test the pathfinding
+            Console.WriteLine("\n------------------\nFinding paths...");
+            foreach (Sequence seq in setToUse)
+            {
+                Console.WriteLine("From " + Convert(seq.First(), c2) + " to " + Convert(seq.Last(), c2));
+                List<TimeLine> path;
+                bool pathFound = canvas.findPath(seq.First(), seq.Last(), out path);
+                canvas.findPath(c['a'], c['d'], out path);
+                string pathStr = "Path = ";
+                foreach(TimeLine pathElement in path)
+                {
+                    pathStr += Convert(pathElement.receptiveField, c2);
+                    if (pathElement != path.Last())
+                        pathStr += "->";
+                }
+                Console.WriteLine(pathStr);
+            } 
+
+            Console.WriteLine("Finding paths, over.");
         }
 
         static void formLetters(out Dictionary< char, double[] > char2code, out Dictionary< double[], char > code2char)

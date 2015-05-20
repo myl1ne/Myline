@@ -438,5 +438,109 @@ namespace TimeCells
             predictions.Reverse();
             return predictions;
         }
+
+        /// <summary>
+        /// Find the shortest (?) path between 2 elements
+        /// </summary>
+        /// <param name="start">Starting point</param>
+        /// <param name="end">Goal to reach</param>
+        /// <param name="path">Oredered path of TimeLines to follow (take the receptive field of each for points)</param>
+        /// <returns>true if a path was found, false if not</returns>
+        public bool findPath(double[] start, double[] end, out List<TimeLine> path)
+        {
+            path = new List<TimeLine>();
+
+            TimeLine bestLineStart = null;
+            double bestDistanceStart = double.PositiveInfinity;
+            bool hasGoodTimelineStart = FindBestLine(start, out bestLineStart, out bestDistanceStart);
+
+            TimeLine bestLineEnd = null;
+            double bestDistanceEnd = double.PositiveInfinity;
+            bool hasGoodTimelineEnd = FindBestLine(end, out bestLineEnd, out bestDistanceEnd);
+
+            //If we do not have good representation for the start or the end we give up.
+            //We could also take the closest ones...
+            if ( !(hasGoodTimelineStart&&hasGoodTimelineEnd) )
+                return false;
+
+            //Build the list of all the lines that can lead to this goal
+            //We could sort it by their scores
+            List<TimeLine> leadingLines = new List<TimeLine>();
+            Dictionary<TimeLine, TimeCell> leadingCells = new Dictionary<TimeLine,TimeCell>();
+
+            foreach(KeyValuePair<TimeCell,double> leadingCell in bestLineEnd.cells[0].previous)
+            {
+                leadingLines.Add(leadingCell.Key.parentLine);
+                leadingCells[leadingCell.Key.parentLine] = leadingCell.Key;
+            }
+
+            //Main idea: Keep the predecessors activated & propagate the current state back in time
+            TimeLine currentTimeLine = bestLineStart;
+            path.Add(currentTimeLine);
+            bool isPathComplete = false;
+            while(!isPathComplete)
+            {
+                TimeCell bestPredecessor = null;
+                int bestStartingLevel = timeLineSize;
+                // propagate the current state back in time
+                for (int currentIndexOnLine = 0; currentIndexOnLine < timeLineSize; currentIndexOnLine++)
+                {
+                    //Find the next cell that will lead to the shortest path to the goal                
+                    foreach (KeyValuePair<TimeCell, double> nextProbas in currentTimeLine.cells[currentIndexOnLine].next)
+                    {
+                        //If the current state leads to a goal-leading line && this leading line is the shortest so far
+                        if (leadingLines.Contains(nextProbas.Key.parentLine))
+                        {
+                            TimeCell leadingCell = leadingCells[nextProbas.Key.parentLine];
+                            if (bestPredecessor == null || bestPredecessor.level + bestStartingLevel > leadingCell.level + currentIndexOnLine)
+                            {
+                                bestPredecessor = leadingCell;
+                                bestStartingLevel = currentIndexOnLine;
+                            }
+                        }
+                    }
+                }
+
+                if (bestPredecessor != null)
+                {
+                    currentTimeLine = bestPredecessor.parentLine;
+                    path.Add(currentTimeLine);
+
+                    //We detect the end of the path by checking that the predecessor is just 1 element behind in time
+                    if (bestPredecessor.level == 1)
+                    {
+                        path.Add(bestLineEnd);
+                        isPathComplete = true;
+                    }
+                }
+                else
+                {
+                    //Problem: there is no 2 overlapping paths
+                    //We expend the leading line of one level (take the leading lines leading to those leading lines)
+                    List<TimeLine> completedLines = new List<TimeLine>(leadingLines);
+                    foreach(TimeLine L in leadingLines)
+                    {
+                        foreach (KeyValuePair<TimeCell, double> leadingCell in L.cells[0].previous)
+                        {
+                            if (!completedLines.Contains(leadingCell.Key.parentLine))
+                            {
+                                completedLines.Add(leadingCell.Key.parentLine);
+                                leadingCells[leadingCell.Key.parentLine] = leadingCell.Key;
+                            }
+                        }
+                    }
+                    if (leadingLines.Count == completedLines.Count)
+                    {
+                        //we could not add more predecessor. There is not path.
+                        break;
+                    }
+                    else
+                    {
+                        leadingLines = completedLines;
+                    }
+                }
+            }
+            return isPathComplete;
+        }
     }
 }
