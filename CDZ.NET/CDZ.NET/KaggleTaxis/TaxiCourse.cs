@@ -22,7 +22,7 @@ namespace KaggleTaxis
         public TaxiCourse()
         { }
 
-        public TaxiCourse(string[] fields)
+        public TaxiCourse(string[] fields, double skipStepSize)
         {
             tripID = fields[0];
             callType = fields[1];
@@ -46,7 +46,9 @@ namespace KaggleTaxis
             string[] points = fields[8].Split(delimiters, StringSplitOptions.RemoveEmptyEntries);
             for (int p = 0; p < points.Length - 1; p += 2)
             {
-                polyline.Add(new double[2] { Convert.ToDouble(points[p]), Convert.ToDouble(points[p + 1]) });
+                double[] pt = new double[]{ Convert.ToDouble(points[p]), Convert.ToDouble(points[p + 1]) };
+                if (polyline.Count>0 && CDZNET.MathHelpers.distance(polyline.Last(), pt) > skipStepSize)
+                    polyline.Add(pt);
             }
         }
     }

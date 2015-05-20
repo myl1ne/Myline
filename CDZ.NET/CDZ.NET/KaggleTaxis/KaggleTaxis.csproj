@@ -82,6 +82,10 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\CDZ.NET\CDZ.NET.csproj">
+      <Project>{491cc76f-2292-4bc8-83d4-3ca857559f6f}</Project>
+      <Name>CDZ.NET</Name>
+    </ProjectReference>
     <ProjectReference Include="..\HippocampusSimple\TimeCells.csproj">
       <Project>{1d567ebc-c16d-49df-a6b5-ae20a18f0fef}</Project>
       <Name>TimeCells</Name>

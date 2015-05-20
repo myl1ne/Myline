@@ -20,10 +20,10 @@ namespace KaggleTaxis
             int timelineSize = 50;
             TimeCells.TimeCanvas canvas = new TimeCanvas(2, timelineSize, null);
             //TimeCells.TimeCanvas canvas = new TimeCanvas(2, 50, HarvesineDistance);
-            canvas.parameterLineCreationTreshold = 0.01;
+            canvas.parameterLineCreationTreshold = 0.005;
             canvas.parameterFFLearningRate = 0;
 
-            bool doTraining = false;
+            bool doTraining = true;
             double avgTrajectoryLength = timelineSize;
             //----------------------------------------------------------------------------------------------
             //Load the training set
@@ -31,7 +31,7 @@ namespace KaggleTaxis
             {
                 double[] minBound = new double[2], maxBound = new double[2];
                 //List<TaxiCourse> trainSet = LoadDataSet("C:\\Users\\Stephane\\Documents\\GitHub\\Myline\\Datasets\\Kaggle Taxis\\train.csv", ref minBound, ref maxBound, ref avgTrajectoryLength, -1);
-                List<TaxiCourse> trainSet = LoadDataSet("D:\\robotology\\src\\Myline\\CDZ.NET\\Datasets\\Kaggle Taxis\\train.csv", ref minBound, ref maxBound, ref avgTrajectoryLength, -1);
+                List<TaxiCourse> trainSet = LoadDataSet("D:\\robotology\\src\\Myline\\CDZ.NET\\Datasets\\Kaggle Taxis\\train.csv", canvas.parameterLineCreationTreshold, ref minBound, ref maxBound, ref avgTrajectoryLength, -1);
                 Console.WriteLine("Range is: Lattitude=" + (maxBound[0] - minBound[0]) + "\t Longitude=" + (maxBound[1] - minBound[1]));
                 Console.WriteLine("MinMax are: Lattitude=" + maxBound[0] + "/" + minBound[0] + "\t Longitude=" + maxBound[1] + "/" + minBound[1]);
 
@@ -79,7 +79,7 @@ namespace KaggleTaxis
             //Load the test set
             double[] minBoundTest = null, maxBoundTest = null;
             double avgTrajectoryLengthTest = 0.0;
-            List<TaxiCourse> testSet = LoadDataSet("D:\\robotology\\src\\Myline\\CDZ.NET\\Datasets\\Kaggle Taxis\\test.csv", ref minBoundTest, ref maxBoundTest, ref avgTrajectoryLengthTest, -1);
+            List<TaxiCourse> testSet = LoadDataSet("D:\\robotology\\src\\Myline\\CDZ.NET\\Datasets\\Kaggle Taxis\\test.csv",canvas.parameterLineCreationTreshold, ref minBoundTest, ref maxBoundTest, ref avgTrajectoryLengthTest, -1);
 
             //----------------------------------------------------------------------------------------------
             //Generate the test results
@@ -143,7 +143,7 @@ namespace KaggleTaxis
             return lineCount;
         }
 
-        static List<TaxiCourse> LoadDataSet(string filePath, ref double[] minBound, ref double[] maxBound, ref double averageSequenceLength, int lineCount = -1)
+        static List<TaxiCourse> LoadDataSet(string filePath, double skipStepTreshold, ref double[] minBound, ref double[] maxBound, ref double averageSequenceLength, int lineCount = -1)
         {
             List<TaxiCourse> dataset = new List<TaxiCourse>();
             Console.WriteLine("Loading dataset from " + filePath);
@@ -172,7 +172,7 @@ namespace KaggleTaxis
             while (!csvReader.EndOfData && currentLine < LINES_TO_READ)
             {
                 string[] fieldData = csvReader.ReadFields();
-                dataset.Add(new TaxiCourse(fieldData));
+                dataset.Add(new TaxiCourse(fieldData, skipStepTreshold));
                 avgTrajectoryLenght += dataset.Last().polyline.Count;
 
                 if (minBound!=null &&maxBound!=null)

@@ -111,36 +111,44 @@ namespace TimeCells
             int lineNumber = 0;
             foreach (TimeLine line in lines)
             {
-                string lineData = file.ReadLine();
-                string[] weights = lineData.Split(new string[] { "()","((", ")),((", "))" }, StringSplitOptions.RemoveEmptyEntries);
-
-                for (int i = 0; i < line.cells.Count; i++)
+                string lineData = "";
+                try
                 {
-                    string[] splitWeights = weights[i].Split(new string[] {"),("}, StringSplitOptions.RemoveEmptyEntries);
-                    if (splitWeights[0] == ",")
-                        continue;
+                    lineData = file.ReadLine();
+                    string[] weights = lineData.Split(new string[] { "()", "((", ")),((", "))" }, StringSplitOptions.RemoveEmptyEntries);
 
-                    foreach (string weight in splitWeights)
+                    for (int i = 0; i < line.cells.Count; i++)
                     {
-                        string[] finallySplitWeight = weight.Split(new string[] { "," }, StringSplitOptions.RemoveEmptyEntries);
-                        int targetIndex = Convert.ToInt16(finallySplitWeight[0]);
-                        double targetWeight = Convert.ToDouble(finallySplitWeight[1]);
+                        string[] splitWeights = weights[i].Split(new string[] { "),(" }, StringSplitOptions.RemoveEmptyEntries);
+                        if (splitWeights[0] == ",")
+                            continue;
 
-                        TimeCell originCell = line.cells[i];
-                        TimeCell targetCell = lines[targetIndex].cells[0];
-                        originCell.next.Add(targetCell, targetWeight);
-                        try
+                        foreach (string weight in splitWeights)
                         {
-                            targetCell.previous[originCell] += 1;
-                        }
-                        catch (KeyNotFoundException)
-                        {
-                            targetCell.previous.Add(originCell, 1);
+                            string[] finallySplitWeight = weight.Split(new string[] { "," }, StringSplitOptions.RemoveEmptyEntries);
+                            int targetIndex = Convert.ToInt16(finallySplitWeight[0]);
+                            double targetWeight = Convert.ToDouble(finallySplitWeight[1]);
+
+                            TimeCell originCell = line.cells[i];
+                            TimeCell targetCell = lines[targetIndex].cells[0];
+                            originCell.next.Add(targetCell, targetWeight);
+                            try
+                            {
+                                targetCell.previous[originCell] += 1;
+                            }
+                            catch (KeyNotFoundException)
+                            {
+                                targetCell.previous.Add(originCell, 1);
+                            }
                         }
                     }
+                    lineNumber++;
+                    Console.WriteLine("Line=" + lineNumber + "/" + lines.Count);
                 }
-                lineNumber++;
-                Console.WriteLine("Line=" + lineNumber + "/" + lines.Count);
+                catch (Exception e)
+                {
+                    Console.WriteLine("Something was wrong at " + lineNumber + "\n\t Line data is : " + lineData);
+                }
             }
             file.Close();
             return isFine;
