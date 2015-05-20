@@ -47,9 +47,10 @@ namespace KaggleTaxis
             for (int p = 0; p < points.Length - 1; p += 2)
             {
                 double[] pt = new double[]{ Convert.ToDouble(points[p]), Convert.ToDouble(points[p + 1]) };
-                if (polyline.Count>0 && CDZNET.MathHelpers.distance(polyline.Last(), pt) > skipStepSize)
+                if (polyline.Count==0 || CDZNET.MathHelpers.distance(polyline.Last(), pt) > skipStepSize)
                     polyline.Add(pt);
             }
+            polyline.TrimExcess();
         }
     }
 }
