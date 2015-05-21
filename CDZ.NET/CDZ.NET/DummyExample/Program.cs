@@ -63,7 +63,8 @@ namespace TimeCells
 
             Console.WriteLine("Training...");
             TimeCanvas canvas;
-            trainImprint(out canvas, setToUse, 5);
+            trainImprint(out canvas, setToUse, 10);
+            canvas.ScaleWeights();
             Console.WriteLine("Training over.");
 
             foreach (Sequence s in setToUse)
@@ -76,19 +77,23 @@ namespace TimeCells
                 {
                     if (item != s.First())
                     {
-                        List<KeyValuePair<double[], double>> predictions = canvas.PredictAll();
+                        if (c2[item] == 'c')
+                        {
+                            int breakHere = 0;
+                        }
+                        List<KeyValuePair<double[], double>> predictions = canvas.PredictAllStrict();
                         double[] reality = item;
                         double itemError = CDZNET.MathHelpers.distance(predictions.First().Key, reality);
                         seqMeanError += itemError;
-                        errorMsg += "ActiveCells=" + canvas.getActiveCells().Count;
-                        errorMsg += "Reality \t" + c2[reality] + "\t";
+                        errorMsg += "ActiveCells=" + canvas.getActiveCells().Count + "\n";
+                        errorMsg += "Reality \t" + c2[reality] + "\n";
                         //errorMsg += "Predict \t"  + Convert(prediction, c2) + "\t";
                         errorMsg += "Predict \t";
                         foreach (KeyValuePair<double[], double> pre in predictions)
                         {
-                            errorMsg += Convert(pre.Key, c2) + "(" + pre.Value + ")" + "\t";
+                            errorMsg += Convert(pre.Key, c2) + "(" + pre.Value.ToString("N2") + ")" + " ";
                         }
-                        errorMsg += "\nError   \t " + itemError + "\n";
+                        errorMsg += "\nError   \t " + itemError + "\n ---- \n";
                     }
                     canvas.PresentInput(item, false, false);
                     canvas.PropagateActivity();
@@ -109,7 +114,7 @@ namespace TimeCells
             {
                 Console.WriteLine("From " + Convert(seq.First(), c2) + " to " + Convert(seq.Last(), c2));
                 List<TimeLine> path;
-                bool pathFound = canvas.findPath(seq.First(), seq.Last(), out path, c2);
+                bool pathFound = canvas.findPath(seq.First(), seq.Last(), out path);
                 //canvas.findPath(c['a'], c['d'], out path);
                 string pathStr = "Path = ";
                 foreach(TimeLine pathElement in path)
@@ -127,6 +132,8 @@ namespace TimeCells
         static void trainImprint(out TimeCanvas canvas, List<Sequence> trainSet, int iterations)
         {
             canvas = new TimeCanvas(25, 7);
+            canvas.c2 = c2;
+
             bool bidirectional = true;
             for (int i = 0; i < iterations; i++)
             {
@@ -140,6 +147,8 @@ namespace TimeCells
         static void trainNormal(out TimeCanvas canvas, List<Sequence> trainSet, int iterations)
         {
             canvas = new TimeCanvas(25, 7);
+            canvas.c2 = c2;
+
             for (int i = 0; i < iterations; i++)
             {
                 foreach (Sequence s in trainSet)

@@ -58,7 +58,8 @@ namespace TimeCells
             //Then one line for each timeline
             foreach (TimeLine line in lines)
             {
-                lineData = ""; 
+                lineData = DEBUGConvert(line.receptiveField).ToString() ; 
+                //lineData = ""; 
                 foreach(TimeCell cell in line.cells)
                 {
                     lineData += "(";
@@ -66,7 +67,8 @@ namespace TimeCells
                     {
                         lineData += "(";
                         int pointToIndex = lines.IndexOf(cellNext.Key.parentLine);
-                        lineData += pointToIndex + "," + cellNext.Value;
+                        //lineData += pointToIndex + "," + cellNext.Value;
+                        lineData += DEBUGConvert(cellNext.Key.parentLine.receptiveField).ToString() + "," + cellNext.Value;
                         lineData += ")";
                         if (cell.next.Last().Key != cellNext.Key)
                             lineData += ",";
@@ -328,14 +330,56 @@ namespace TimeCells
             }
         }
 
-        public List<TimeCell> getActiveCells()
+        /// <summary>
+        /// Scale down the weights so that the input/output "degrees" of every node is 1 (apply a softmax)
+        /// </summary>
+        public void ScaleWeights()
+        {
+            List<TimeCell> activeCells = new List<TimeCell>();
+            foreach (TimeLine line in lines)
+            {
+                foreach (TimeCell cell in line.cells)
+                {
+                    //Previous
+                    double sumPrevious = 0.0;
+                    List<TimeCell> previousCells = new List<TimeCell>(cell.previous.Keys);
+                    foreach (TimeCell p in previousCells)
+                    {
+                        sumPrevious += Math.Exp( cell.previous[p] );
+                    }
+                    foreach (TimeCell p in previousCells)
+                    {
+                        cell.previous[p] = Math.Exp(cell.previous[p]) / sumPrevious;
+                    }
+
+                    //Next
+                    double sumNext = 0.0;
+                    List<TimeCell> nextCells = new List<TimeCell>(cell.next.Keys);
+                    foreach (TimeCell n in nextCells)
+                    {
+                        sumNext += Math.Exp(cell.next[n]);
+                    }
+                    foreach (TimeCell n in nextCells)
+                    {
+                        cell.next[n] = Math.Exp(cell.next[n]) / sumNext;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Get the list of active cell on the network or on a specific level
+        /// </summary>
+        /// <param name="level">the level to target (-1 for the entire network)</param>
+        /// <returns></returns>
+        public List<TimeCell> getActiveCells(int level = -1)
         {
             List<TimeCell> activeCells = new List<TimeCell>();
             foreach (TimeLine line in lines)
             {
                 foreach(TimeCell cell in line.cells)
                 {
-                    if (cell.isActive)
+                    if (cell.isActive && (level==-1||cell.level==level))
                         activeCells.Add(cell);
                 }
             }
@@ -408,13 +452,13 @@ namespace TimeCells
             Dictionary<TimeLine, double> predictions = new Dictionary<TimeLine, double>();
             foreach(TimeLine line in lines)
             {
-                predictions[line] = 1;
+                predictions[line] = 1.0;
                 TimeCell presentCell = line.cells[0];
                 foreach (KeyValuePair<TimeCell,double> cell in presentCell.previous)
                 {
                     if (cell.Key.isActive)
                     {
-                        predictions[line] *= cell.Value;
+                        predictions[line] *= (1+cell.Value);
                     }
                 }
                 if (bestTimeLine == null || predictions[bestTimeLine]<predictions[line])
@@ -438,14 +482,18 @@ namespace TimeCells
             List<KeyValuePair<double[], double>> predictions = new List<KeyValuePair<double[], double>>();
             foreach (TimeLine line in lines)
             {
-                double score = 1;
+                double score = 0.0;
                 TimeCell presentCell = line.cells[0];
                 foreach (KeyValuePair<TimeCell, double> cell in presentCell.previous)
                 {
                     if (cell.Key.isActive)
                     {
-                        score *= cell.Value;
+                        score += cell.Value;
                     }
+                    //else
+                    //{
+                    //    score -= cell.Value;
+                    //}
                 }
                 predictions.Add( new KeyValuePair<double[], double>(line.receptiveField, score) );
             }
@@ -453,13 +501,80 @@ namespace TimeCells
             predictions.Reverse();
             return predictions;
         }
-        static char DEBUGConvert(double[] d, Dictionary<double[], char> code2char)
+
+        /// <summary>
+        /// Generate a prediction given the current state of the network
+        /// Restrict the possible solution to the elements following directly the current state (first row on the timelines)
+        /// </summary>
+        /// <returns> A list of prediction and their score</returns>
+        public List<KeyValuePair<double[], double>> PredictAllStrict()
+        {
+            //Get all the active cell of the first row
+            List<TimeCell> currentState = getActiveCells(1);
+            List<TimeCell> pastCells = getActiveCells();
+
+            List<KeyValuePair<double[], double>> predictions = new List<KeyValuePair<double[], double>>();
+            foreach (TimeLine line in lines)
+            {                
+                //It is not part of the history
+                bool isPartOfHistory = false;
+                foreach (TimeCell c in pastCells)
+                {
+                    if (line == c.parentLine)
+                    {
+                        isPartOfHistory = true;
+                        break;
+                    }
+                }
+                if (isPartOfHistory)
+                    continue;
+
+                //Check that this timeline is accessible from the active cells
+                bool isAccessible = false;
+                foreach (TimeCell c in currentState)
+                {
+                    foreach(TimeCell cNext in c.next.Keys)
+                        if (cNext.parentLine == line)
+                        {
+                            isAccessible = true;
+                            break;
+                        }
+                    if (isAccessible)
+                        break;
+                }
+                if (!isAccessible)
+                    continue;
+
+                double score = 0.0;
+                TimeCell presentCell = line.cells[0];
+                foreach (KeyValuePair<TimeCell, double> cell in presentCell.previous)
+                {
+                    //char predictedTimeline = DEBUGConvert(line.receptiveField);
+                    //char predictingTimeline = DEBUGConvert(cell.Key.parentLine.receptiveField);
+                    if (cell.Key.isActive)
+                    {
+                        score += cell.Value;
+                    }
+                    else
+                    {
+                        score -= cell.Value;
+                    }
+                }
+                predictions.Add(new KeyValuePair<double[], double>(line.receptiveField, score));
+            }
+            predictions.Sort((a, b) => a.Value.CompareTo(b.Value));
+            predictions.Reverse();
+            return predictions;
+        }
+
+        public Dictionary<double[], char> c2;
+        char DEBUGConvert(double[] d)
         {
             //find the closest
-            foreach (double[] real in code2char.Keys)
+            foreach (double[] real in c2.Keys)
             {
                 if (real.SequenceEqual(d))
-                    return code2char[real];
+                    return c2[real];
             }
 
             return '#';
@@ -471,7 +586,7 @@ namespace TimeCells
         /// <param name="end">Goal to reach</param>
         /// <param name="path">Oredered path of TimeLines to follow (take the receptive field of each for points)</param>
         /// <returns>true if a path was found, false if not</returns>
-        public bool findPath(double[] start, double[] end, out List<TimeLine> path, Dictionary<double[], char> c2)
+        public bool findPath(double[] start, double[] end, out List<TimeLine> path)
         {
             path = new List<TimeLine>();
 
@@ -509,7 +624,7 @@ namespace TimeCells
             {
                 TimeCell bestPredecessor = null;
                 int bestStartingLevel = timeLineSize;
-                char DEBUGCurrentLine = DEBUGConvert(currentTimeLine.receptiveField, c2);
+                char DEBUGCurrentLine = DEBUGConvert(currentTimeLine.receptiveField);
 
                 // propagate the current state back in time
                 for (int currentIndexOnLine = 0; currentIndexOnLine < timeLineSize; currentIndexOnLine++)
@@ -517,7 +632,7 @@ namespace TimeCells
                     //Find the next cell that will lead to the shortest path to the goal
                     foreach (KeyValuePair<TimeCell, double> nextProbas in currentTimeLine.cells[currentIndexOnLine].next)
                     {
-                        char DEBUGConnectedLine = DEBUGConvert(nextProbas.Key.parentLine.receptiveField, c2);
+                        char DEBUGConnectedLine = DEBUGConvert(nextProbas.Key.parentLine.receptiveField);
                         //If the current state leads to a goal-leading line && this leading line is the shortest so far
                         if (leadingLines.Contains(nextProbas.Key.parentLine))
                         {
