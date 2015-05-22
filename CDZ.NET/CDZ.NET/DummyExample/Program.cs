@@ -11,6 +11,7 @@ namespace TimeCells
         public static Dictionary<char, double[]> c;
         public static Dictionary<double[], char> c2;
 
+        [Serializable]
         class Sequence : List<double[]>
         {
             public string ToReadable()
@@ -59,11 +60,16 @@ namespace TimeCells
                 new Sequence() { c['m'], c['h'], c['e'], c['d'], c['c'], c['b'], c['a'], c['f'], c['i'] }            
             };
 
+            //List<Sequence> setToUse = sequenceGoalDirected;
             List<Sequence> setToUse = sequenceShortcuts;
 
             Console.WriteLine("Training...");
             TimeCanvas canvas;
-            trainImprint(out canvas, setToUse, 10);
+            bool bidirectionalTraining = true;
+            trainImprint(out canvas, setToUse, 1, false);
+            canvas.EnableCA1();
+            trainNormal(canvas, setToUse, 1, bidirectionalTraining);
+            canvas.TrainCA1();
             canvas.ScaleWeights();
             Console.WriteLine("Training over.");
 
@@ -88,12 +94,21 @@ namespace TimeCells
                         errorMsg += "ActiveCells=" + canvas.getActiveCells().Count + "\n";
                         errorMsg += "Reality \t" + c2[reality] + "\n";
                         //errorMsg += "Predict \t"  + Convert(prediction, c2) + "\t";
-                        errorMsg += "Predict \t";
+                        errorMsg += "Prediction TC \t";
                         foreach (KeyValuePair<double[], double> pre in predictions)
                         {
                             errorMsg += Convert(pre.Key, c2) + "(" + pre.Value.ToString("N2") + ")" + " ";
                         }
-                        errorMsg += "\nError   \t " + itemError + "\n ---- \n";
+                        errorMsg += "\nErrorTC   \t " + itemError;
+
+                        List<KeyValuePair<double[], double>> predictionsCA1 = canvas.PredictAllCA1();
+                        errorMsg += "\nPrediction CA1 \t";
+                        foreach (KeyValuePair<double[], double> pre in predictionsCA1)
+                        {
+                            errorMsg += Convert(pre.Key, c2) + "(" + pre.Value.ToString("N2") + ")" + " ";
+                        }
+                        double itemErrorCA1 = CDZNET.MathHelpers.distance(predictionsCA1.First().Key, reality);
+                        errorMsg += "\nErrorCA1   \t " + itemErrorCA1 + "\n ---- \n";
                     }
                     canvas.PresentInput(item, false, false);
                     canvas.PropagateActivity();
@@ -129,12 +144,11 @@ namespace TimeCells
             Console.WriteLine("Finding paths, over.");
         }
 
-        static void trainImprint(out TimeCanvas canvas, List<Sequence> trainSet, int iterations)
+        static void trainImprint(out TimeCanvas canvas, List<Sequence> trainSet, int iterations, bool bidirectional)
         {
             canvas = new TimeCanvas(25, 7);
             canvas.c2 = c2;
 
-            bool bidirectional = true;
             for (int i = 0; i < iterations; i++)
             {
                 foreach (Sequence s in trainSet)
@@ -144,10 +158,10 @@ namespace TimeCells
             }
             canvas.Save("debugImprint.csv");
         }
-        static void trainNormal(out TimeCanvas canvas, List<Sequence> trainSet, int iterations)
+        static void trainNormal(TimeCanvas canvas, List<Sequence> trainSet, int iterations, bool bidirectional)
         {
-            canvas = new TimeCanvas(25, 7);
-            canvas.c2 = c2;
+            //canvas = new TimeCanvas(25, 7);
+            //canvas.c2 = c2;
 
             for (int i = 0; i < iterations; i++)
             {
@@ -157,6 +171,18 @@ namespace TimeCells
                     foreach (double[] item in s)
                     {
                         canvas.Train(item);
+                    }
+
+                    if (bidirectional)
+                    {
+                        Sequence rS = ObjectCopier.Clone(s);
+                        rS.Reverse();
+
+                        canvas.Reset();
+                        foreach (double[] item in rS)
+                        {
+                            canvas.Train(item);
+                        }
                     }
                 }
             }

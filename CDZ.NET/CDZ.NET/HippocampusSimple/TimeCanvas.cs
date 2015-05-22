@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Collections.Concurrent;
 
 namespace TimeCells
 {
@@ -21,6 +22,121 @@ namespace TimeCells
         private List<TimeLine> activeLines = new List<TimeLine>();
 
         public DistanceFunction distanceFx;
+
+        public delegate void DelegateProcessElement(double[] elt);
+        public delegate void DelegateProcessSequence(List<double[]> seq);
+        public event DelegateProcessElement onElementTraining;
+        public event DelegateProcessElement onElementPresented;
+        public event DelegateProcessSequence onSequenceTraining;
+        public event DelegateProcessSequence onSequencePresented;
+
+
+        #region CA1 Autoassociator
+
+        private List<Dictionary<CDZNET.Core.Signal, double[,]>> trainingElements = new List<Dictionary<CDZNET.Core.Signal, double[,]>>();
+        private CDZNET.Core.MMNodeAFSOM ca1Network = new CDZNET.Core.MMNodeAFSOM(new CDZNET.Point2D(20, 20));
+        public void EnableCA1()
+        {
+            onElementTraining += CollectTrainingElement;
+            ca1Network = new CDZNET.Core.MMNodeAFSOM(new CDZNET.Point2D(20, 20));
+            ca1Network.addModality(new CDZNET.Core.Signal(lines.Count, timeLineSize));
+        }
+
+        public void TrainCA1()
+        {
+            Console.WriteLine("Training CA1...");
+            int totalCycle = ca1Network.Batch(trainingElements, 1000, 0.01);
+            Console.WriteLine("Achieved in " + totalCycle);
+        }
+
+        public void CollectTrainingElement(double[] input)
+        {
+            Dictionary<CDZNET.Core.Signal, double[,]> newDic = new Dictionary<CDZNET.Core.Signal,double[,]>();
+            newDic.Add(ca1Network.modalities.First(), GetActivitySnapshot());
+            trainingElements.Add(newDic);
+        }
+
+        public  double[,] GetActivitySnapshot()
+        {
+            double[,] ss = new double[lines.Count, timeLineSize];
+            int i =0, j = 0;
+            foreach(TimeLine l in lines)
+            {
+                j = 0;
+                foreach(TimeCell c in l.cells)
+                {
+                    ss[i, j] = (c.isActive) ? 1.0 : 0.0;
+                    j++;
+                }
+                i++;
+            }
+            return ss;
+        }
+        public List<KeyValuePair<double[], double>> PredictAllCA1()
+        {
+            double[,] ss = GetActivitySnapshot();
+            ca1Network.modalities.First().reality = ss;
+            ca1Network.Converge();
+            ca1Network.Diverge();
+            double[,] pred = ca1Network.modalities.First().prediction;
+
+            List<KeyValuePair<double[], double>> predictions = new List<KeyValuePair<double[], double>>();
+            int i = 0;
+            foreach (TimeLine line in lines)
+            {
+                if (pred[i, 0]>0.0)
+                    predictions.Add(new KeyValuePair<double[], double>(line.receptiveField, pred[i,0]));
+                i++;
+            }
+            predictions.Sort((a, b) => a.Value.CompareTo(b.Value));
+            predictions.Reverse();
+            return predictions;
+        }
+
+        public bool findPathCA1(double[] start, double[] end, out List<TimeLine> path)
+        {
+            path = new List<TimeLine>();
+
+            TimeLine bestLineStart = null;
+            double bestDistanceStart = double.PositiveInfinity;
+            bool hasGoodTimelineStart = FindBestLine(start, out bestLineStart, out bestDistanceStart);
+
+            TimeLine bestLineEnd = null;
+            double bestDistanceEnd = double.PositiveInfinity;
+            bool hasGoodTimelineEnd = FindBestLine(end, out bestLineEnd, out bestDistanceEnd);
+
+            //If we do not have good representation for the start or the end we give up.
+            //We could also take the closest ones...
+            if (!(hasGoodTimelineStart && hasGoodTimelineEnd))
+                return false;
+
+            int indexStart = lines.IndexOf(bestLineStart);
+            int indexEnd = lines.IndexOf(bestLineEnd);
+
+
+            PresentInput(start, false, false);
+            PropagateActivity();
+
+            bool pathFound = false;
+            while (pathFound)
+            {
+                //Get the current state
+                double[,] ss = GetActivitySnapshot();
+                //Add the goal as the "next" element
+                ss[0, indexEnd] = 0.75; //make it weaker that the current state to avoid backtraking from there
+
+                //Predict
+                ca1Network.modalities.First().reality = ss;
+                ca1Network.Converge();
+                ca1Network.Diverge();
+                double[,] pred = ca1Network.modalities.First().prediction;
+
+            }
+
+            return isPathComplete;
+        }
+
+        #endregion CA1 Autoassociator
 
         public TimeCanvas(int inputSize, int timeLineSize = 7, DistanceFunction distanceFunction = null)
         {
@@ -236,6 +352,10 @@ namespace TimeCells
                 Train(inputs[i]);
             }
             meanPredictionsError /= inputs.Count;
+
+            //The callback is done in Train(inputs[i])
+            //if (onSequenceTraining != null)
+            //    onSequenceTraining(inputs);
         }
 
         /// <summary>
@@ -285,6 +405,10 @@ namespace TimeCells
                 }
             }
 
+            //5.5 Callback
+            if (onElementTraining != null)
+                onElementTraining(input);
+
             //6-Make the activity propagate one step
             PropagateActivity();
         }
@@ -314,6 +438,10 @@ namespace TimeCells
 
             //3-Activate the first cell of the winner line
             bestLine.cells[0].isActive = true;
+
+            //4-Callback
+            if (onElementPresented != null)
+                onElementPresented(input);
 
             return bestLine;
         }
@@ -567,6 +695,7 @@ namespace TimeCells
             return predictions;
         }
 
+        #region DEBUG
         public Dictionary<double[], char> c2;
         char DEBUGConvert(double[] d)
         {
@@ -579,6 +708,8 @@ namespace TimeCells
 
             return '#';
         }
+        #endregion DEBUG
+
         /// <summary>
         /// Find the shortest (?) path between 2 elements
         /// </summary>
