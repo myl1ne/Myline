@@ -63,13 +63,14 @@ namespace TimeCells
             //List<Sequence> setToUse = sequenceGoalDirected;
             List<Sequence> setToUse = sequenceShortcuts;
 
-            Console.WriteLine("Training...");
+            Console.WriteLine("Training... CA3 (Sequences)");
             TimeCanvas canvas;
             bool bidirectionalTraining = true;
             trainImprint(out canvas, setToUse, 1, false);
             canvas.EnableCA1();
+            canvas.EnableGoal();
             trainNormal(canvas, setToUse, 1, bidirectionalTraining);
-            canvas.TrainCA1();
+            //canvas.TrainCA1();
             canvas.ScaleWeights();
             Console.WriteLine("Training over.");
 
@@ -83,10 +84,6 @@ namespace TimeCells
                 {
                     if (item != s.First())
                     {
-                        if (c2[item] == 'c')
-                        {
-                            int breakHere = 0;
-                        }
                         List<KeyValuePair<double[], double>> predictions = canvas.PredictAllStrict();
                         double[] reality = item;
                         double itemError = CDZNET.MathHelpers.distance(predictions.First().Key, reality);
@@ -115,33 +112,58 @@ namespace TimeCells
                 }
                 Console.WriteLine(errorMsg);
             }
+            Console.WriteLine("Press a key to continue...");
+            Console.ReadKey();
+
+            Console.WriteLine("Training... CA1 (Goal Oriented)");
+
+            canvas.TrainGoalNetwork();
+            //canvas.ScaleWeights();
+            Console.WriteLine("Training over.");
 
             //Test the pathfinding
             List<Sequence> pathToTest = new List<Sequence>
-            {
+            {                
+                //new Sequence{c['c'], c['i']},
+                //new Sequence{c['c'], c['s']},
+                //new Sequence{c['c'], c['m']}
+
                 new Sequence{c['q'], c['o']},
-                //new Sequence{c['a'], c['k']},
-                //new Sequence{c['f'], c['r']}
+                new Sequence{c['a'], c['k']},
+                new Sequence{c['f'], c['r']}
             };
 
             Console.WriteLine("\n------------------\nFinding paths...");
-            foreach (Sequence seq in pathToTest)
+            //while (true)
             {
-                Console.WriteLine("From " + Convert(seq.First(), c2) + " to " + Convert(seq.Last(), c2));
-                List<TimeLine> path;
-                bool pathFound = canvas.findPath(seq.First(), seq.Last(), out path);
-                //canvas.findPath(c['a'], c['d'], out path);
-                string pathStr = "Path = ";
-                foreach(TimeLine pathElement in path)
+                foreach (Sequence seq in pathToTest)
                 {
-                    pathStr += Convert(pathElement.receptiveField, c2);
-                    if (pathElement != path.Last())
-                        pathStr += "->";
-                }
-                Console.WriteLine(pathStr);
-            } 
+                    Console.WriteLine("From " + Convert(seq.First(), c2) + " to " + Convert(seq.Last(), c2));
+                    List<TimeLine> autoPath;
+                    bool pathFoundAuto = canvas.findPathGoalNetwork(seq.First(), seq.Last(), out autoPath);
+                    Console.WriteLine("Autoassociator path = " + pathToString(autoPath));
 
+                    List<TimeLine> heteroPath;
+                    bool pathFoundHetero = canvas.findPathGoalNetworkIO(seq.First(), seq.Last(), out heteroPath);
+                    //canvas.findPath(c['a'], c['d'], out path);
+                    Console.WriteLine("Heteroassociator path = " + pathToString(heteroPath));
+                }
+                Console.WriteLine("Press a key to exit...");
+                Console.ReadKey();
+            }
             Console.WriteLine("Finding paths, over.");
+        }
+
+        static string pathToString(List<TimeLine> path)
+        {
+            string pathStr = "Path = ";
+            foreach (TimeLine pathElement in path)
+            {
+                pathStr += Convert(pathElement.receptiveField, c2);
+                if (pathElement != path.Last())
+                    pathStr += "->";
+            }
+            return pathStr;
         }
 
         static void trainImprint(out TimeCanvas canvas, List<Sequence> trainSet, int iterations, bool bidirectional)

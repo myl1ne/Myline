@@ -31,21 +31,279 @@ namespace TimeCells
         public event DelegateProcessSequence onSequencePresented;
 
 
+        #region Goal Autoassociator
+        private List<Dictionary<CDZNET.Core.Signal, double[,]>> goalTrainingElements = new List<Dictionary<CDZNET.Core.Signal, double[,]>>();
+        private CDZNET.Core.MMNode goalNetwork;
+
+        private List<KeyValuePair<double[,], double[,]>> goalTrainingElementsIO = new List<KeyValuePair<double[,], double[,]>>();
+        private CDZNET.Core.IONode goalNetworkIO;      
+
+        public void EnableGoal()
+        {
+            onElementTraining += CollectGoalTrainingElement;
+            //goalNetwork = new CDZNET.Core.MMNodeDeepBeliefNetwork(new CDZNET.Point2D(1, 1), new int[] { 20, 10, 5 });
+            goalNetwork = new CDZNET.Core.MMNodeMLP(new CDZNET.Point2D(1, 1), new int[] { 10, 5 });
+            //goalNetwork = new CDZNET.Core.MMNodeMWSOM(new CDZNET.Point2D(50, 50));
+            //goalNetwork = new CDZNET.Core.MMNodeLookupTable(new CDZNET.Point2D(1,1));
+            goalNetwork.addModality(new CDZNET.Core.Signal(lines.Count, 3)); //0 - current state //1 - next state //2 - goal
+
+            goalNetworkIO = new CDZNET.Core.IONodeAFMLP(
+                new CDZNET.Point2D(lines.Count, 2), //Input
+                new CDZNET.Point2D(lines.Count, 1), //Output
+                new int[] { 30, 20 },               //bottomup layers
+                new int[] { 30, 20 });              //topdown layers
+        }
+
+        public void TrainGoalNetwork()
+        {
+            DisplayTrainingSetGoal();
+            Console.WriteLine("Training GoalNet...");
+            //goalNetwork.learningLocked = false;
+            //int totalCycle2 = goalNetwork.Batch(goalTrainingElements, 500000, 0.01);
+            int totalCycle = goalNetworkIO.Batch(goalTrainingElementsIO, 500000, 0.01);
+            goalNetworkIO.learningLocked = true;
+            //goalNetwork.learningLocked = true;
+            
+            //goalNetwork.learningLocked = true;
+            Console.WriteLine("Achieved in " + totalCycle);
+        }
+
+        public void DisplayTrainingSetGoal()
+        {
+            Console.WriteLine("TRAINING SET");
+            foreach(Dictionary<CDZNET.Core.Signal, double[,]> e in goalTrainingElements)
+            {
+                double[,] p = e[goalNetwork.modalities.First()];
+                Console.WriteLine(tripletToString(p));
+            }
+        }
+
+        public int findMaxIndex(double[] distribution)
+        {
+            int bestIndex = 0;
+            for (int i = 0; i < lines.Count; i++)
+            {
+                if (distribution[i] > distribution[bestIndex])
+                    bestIndex = i;
+            }
+            return bestIndex; 
+        }
+
+        public string tripletToString(double[,] triplet)
+        {
+            double[] s = new double[lines.Count];
+            double[] s1 = new double[lines.Count];
+            double[] g = new double[lines.Count];
+            for (int i = 0; i < lines.Count; i++)
+            {
+                s[i] = triplet[i, 0];
+                s1[i] = triplet[i, 1];
+                g[i] = triplet[i, 2];
+            }
+            TimeLine tlS = lines[findMaxIndex(s)];
+            TimeLine tlS1 = lines[findMaxIndex(s1)];
+            TimeLine tlG = lines[findMaxIndex(g)];
+            return ("(" + DEBUGConvert(tlS.receptiveField) + "," + DEBUGConvert(tlS1.receptiveField) + "," + DEBUGConvert(tlG.receptiveField) + ")");
+        }
+
+        public string tripletToString(double[,] stateGoal, double[,] nextAction)
+        {
+            double[] s = new double[lines.Count];
+            double[] s1 = new double[lines.Count];
+            double[] g = new double[lines.Count];
+            for (int i = 0; i < lines.Count; i++)
+            {
+                s[i] = stateGoal[i, 0];
+                s1[i] = stateGoal[i, 1];
+                g[i] = nextAction[i, 0];
+            }
+            TimeLine tlS = lines[findMaxIndex(s)];
+            TimeLine tlS1 = lines[findMaxIndex(s1)];
+            TimeLine tlG = lines[findMaxIndex(g)];
+            return ("(" + DEBUGConvert(tlS.receptiveField) + "," + DEBUGConvert(tlS1.receptiveField) + "," + DEBUGConvert(tlG.receptiveField) + ")");
+        }
+
+        public void CollectGoalTrainingElement(double[] input)
+        {
+            for (int level = 0; level < timeLineSize-1; level++)
+            {
+                double[,] triplet = new double[lines.Count, 3]; //0 - current state //1 - next state //2 - goal
+
+                //Set the initial state
+                bool isInitialEmpty = true;
+                for (int i = 0; i < lines.Count; i++)
+                {
+                    if (lines[i].cells[level+1].isActive)
+                    {
+                        triplet[i, 0] = 1.0;
+                        isInitialEmpty = false;
+                    }
+                    else
+                        triplet[i, 0] = 0.0;
+                }
+
+                //Set the next state
+                bool isNextEmpty = true;
+                for (int i = 0; i < lines.Count; i++)
+                {
+                    if (lines[i].cells[level].isActive)
+                    {
+                        triplet[i, 1] = 1.0;
+                        isNextEmpty = false;
+                    }
+                    else
+                        triplet[i, 1] = 0.0;
+                }
+
+                //Set the goal
+                bool isGoalEmpty = true;
+                for (int i = 0; i < lines.Count; i++)
+                {
+                    if (lines[i].cells[0].isActive)
+                    {
+                        triplet[i, 2] = 1.0;
+                        isGoalEmpty = false;
+                    }
+                    else
+                        triplet[i, 2] = 0.0;
+                }
+
+                if (isInitialEmpty || isNextEmpty || isGoalEmpty)
+                    break;
+                else
+                {
+                    Dictionary<CDZNET.Core.Signal, double[,]> newDic = new Dictionary<CDZNET.Core.Signal, double[,]>();
+                    newDic.Add(goalNetwork.modalities.First(), triplet);
+                    goalTrainingElements.Add(newDic);
+                    Console.WriteLine(tripletToString(triplet));
+
+
+                    double[,] tripletInput = new double[lines.Count,2];
+                    double[,] tripletOutput = new double[lines.Count,1];
+                    for (int i = 0; i < lines.Count; i++)
+                    {
+                        tripletInput[i,0] = triplet[i,0]; //initial state
+                        tripletInput[i,1] = triplet[i,2]; //goal
+                        tripletOutput[i,0] = triplet[i,1]; //next step
+                    }
+                    goalTrainingElementsIO.Add(new KeyValuePair<double[,], double[,]>(tripletInput, tripletOutput));
+                }
+            }
+        }
+        public bool findPathGoalNetwork(double[] start, double[] end, out List<TimeLine> path)
+        {
+            path = new List<TimeLine>();
+
+            TimeLine bestLineStart = null;
+            double bestDistanceStart = double.PositiveInfinity;
+            bool hasGoodTimelineStart = FindBestLine(start, out bestLineStart, out bestDistanceStart);
+
+            TimeLine bestLineEnd = null;
+            double bestDistanceEnd = double.PositiveInfinity;
+            bool hasGoodTimelineEnd = FindBestLine(end, out bestLineEnd, out bestDistanceEnd);
+
+            //If we do not have good representation for the start or the end we give up.
+            //We could also take the closest ones...
+            if (!(hasGoodTimelineStart && hasGoodTimelineEnd))
+                return false;
+
+            int indexStart = lines.IndexOf(bestLineStart);
+            int indexEnd = lines.IndexOf(bestLineEnd);
+            path.Add(lines[indexStart]);
+
+            while (indexStart != indexEnd)
+            {
+                double[,] triplet = new double[lines.Count, 3]; //0 - current state //1 - next state //2 - goal
+                triplet[indexStart, 0] = 1.0;
+                triplet[indexEnd, 2] = 1.0;
+                Console.WriteLine("Presenting triplet " + tripletToString(triplet));
+                goalNetwork.modalities.First().reality = triplet.Clone() as double[,];
+                goalNetwork.Converge();
+                goalNetwork.Diverge();
+                double[,] pred = ca1Network.modalities.First().prediction.Clone() as double[,];
+                //Find the best next element
+                int bestIndex = 0;
+                for (int i = 0; i < lines.Count; i++)
+                {
+                    if (pred[i, 1] > pred[bestIndex, 1])
+                        bestIndex = i;
+                }
+
+                indexStart = bestIndex;
+                //If we came back to a state that is already in the path we just give up
+                if (path.Contains(lines[indexStart]))
+                    return false;
+                path.Add(lines[bestIndex]);
+            }
+            return (indexStart == indexEnd);
+        }
+
+        public bool findPathGoalNetworkIO(double[] start, double[] end, out List<TimeLine> path)
+        {
+            path = new List<TimeLine>();
+
+            TimeLine bestLineStart = null;
+            double bestDistanceStart = double.PositiveInfinity;
+            bool hasGoodTimelineStart = FindBestLine(start, out bestLineStart, out bestDistanceStart);
+
+            TimeLine bestLineEnd = null;
+            double bestDistanceEnd = double.PositiveInfinity;
+            bool hasGoodTimelineEnd = FindBestLine(end, out bestLineEnd, out bestDistanceEnd);
+
+            //If we do not have good representation for the start or the end we give up.
+            //We could also take the closest ones...
+            if (!(hasGoodTimelineStart && hasGoodTimelineEnd))
+                return false;
+
+            int indexStart = lines.IndexOf(bestLineStart);
+            int indexEnd = lines.IndexOf(bestLineEnd);
+            path.Add(lines[indexStart]);
+
+            while (indexStart != indexEnd)
+            {
+                double[,] tripletInput = new double[lines.Count, 2]; //0 - current state //1 - goal
+                tripletInput[indexStart, 0] = 1.0;
+                tripletInput[indexEnd, 1] = 1.0;
+
+                goalNetworkIO.input.reality = tripletInput.Clone() as double[,];
+                goalNetworkIO.BottomUp();
+                double[,] pred = goalNetworkIO.output.prediction.Clone() as double[,];
+                //Find the best next element
+                int bestIndex = 0;
+                for (int i = 0; i < lines.Count; i++)
+                {
+                    if (pred[i, 0] > pred[bestIndex, 0])
+                        bestIndex = i;
+                }
+                Console.WriteLine("Presenting triplet " + tripletToString(tripletInput, pred));
+
+                indexStart = bestIndex;
+                //If we came back to a state that is already in the path we just give up
+                if (path.Contains(lines[indexStart]))
+                    return false;
+                path.Add(lines[bestIndex]);
+            }
+            return (indexStart == indexEnd);
+        }
+        #endregion
         #region CA1 Autoassociator
 
-        private List<Dictionary<CDZNET.Core.Signal, double[,]>> trainingElements = new List<Dictionary<CDZNET.Core.Signal, double[,]>>();
-        private CDZNET.Core.MMNodeAFSOM ca1Network = new CDZNET.Core.MMNodeAFSOM(new CDZNET.Point2D(20, 20));
+        private List<Dictionary<CDZNET.Core.Signal, double[,]>> ca1TrainingElements = new List<Dictionary<CDZNET.Core.Signal, double[,]>>();
+        private CDZNET.Core.MMNodeAFSOM ca1Network;
+
         public void EnableCA1()
         {
             onElementTraining += CollectTrainingElement;
-            ca1Network = new CDZNET.Core.MMNodeAFSOM(new CDZNET.Point2D(20, 20));
+            ca1Network = new CDZNET.Core.MMNodeAFSOM(new CDZNET.Point2D(10, 10));
             ca1Network.addModality(new CDZNET.Core.Signal(lines.Count, timeLineSize));
         }
 
         public void TrainCA1()
         {
             Console.WriteLine("Training CA1...");
-            int totalCycle = ca1Network.Batch(trainingElements, 1000, 0.01);
+            ca1Network.learningLocked = false;
+            int totalCycle = ca1Network.Batch(ca1TrainingElements, 50000, 0.01);
+            ca1Network.learningLocked = true;
             Console.WriteLine("Achieved in " + totalCycle);
         }
 
@@ -53,7 +311,7 @@ namespace TimeCells
         {
             Dictionary<CDZNET.Core.Signal, double[,]> newDic = new Dictionary<CDZNET.Core.Signal,double[,]>();
             newDic.Add(ca1Network.modalities.First(), GetActivitySnapshot());
-            trainingElements.Add(newDic);
+            ca1TrainingElements.Add(newDic);
         }
 
         public  double[,] GetActivitySnapshot()
@@ -96,6 +354,69 @@ namespace TimeCells
         public bool findPathCA1(double[] start, double[] end, out List<TimeLine> path)
         {
             path = new List<TimeLine>();
+            
+            TimeLine bestLineStart = null;
+            double bestDistanceStart = double.PositiveInfinity;
+            bool hasGoodTimelineStart = FindBestLine(start, out bestLineStart, out bestDistanceStart);
+
+            TimeLine bestLineEnd = null;
+            double bestDistanceEnd = double.PositiveInfinity;
+            bool hasGoodTimelineEnd = FindBestLine(end, out bestLineEnd, out bestDistanceEnd);
+
+            //If we do not have good representation for the start or the end we give up.
+            //We could also take the closest ones...
+            if (!(hasGoodTimelineStart && hasGoodTimelineEnd))
+                return false;
+
+            int indexStart = lines.IndexOf(bestLineStart);
+            int indexEnd = lines.IndexOf(bestLineEnd);
+            List<int> pathIndex = new List<int>();
+
+            path.Add(lines[indexStart]);
+            pathIndex.Add(indexStart);
+
+            while (indexStart!=indexEnd)
+            {
+                //Clear the array
+                Array.Clear(ca1Network.modalities.First().reality, 0, ca1Network.modalities.First().reality.Length);
+                //Add the current state
+                for (int i = 1; i < timeLineSize && i<=pathIndex.Count; i++)
+                {
+                    ca1Network.modalities.First().reality[pathIndex[pathIndex.Count - i], i] = 1;          
+                }
+                //Add the goal as the "next" element
+                ca1Network.modalities.First().reality[indexEnd,0] = 0.75;//make it weaker than the current state to avoid "backtraking" from there
+                
+                //Predict
+                ca1Network.Converge();
+                ca1Network.Diverge();
+                double[,] pred = ca1Network.modalities.First().prediction;
+
+                //Find the best next element
+                int bestIndex = 0;
+                for (int i = 0; i < lines.Count; i++)
+			    {
+                    if (pred[i,0]>pred[bestIndex,0])
+                        bestIndex = i;
+                }
+               
+                //Take the first element as the next one
+                indexStart = bestIndex;
+
+                //If we came back to a state that is already in the path we just give up
+                if (path.Contains(lines[indexStart]))
+                    return false;
+
+                //Add the current state to the path
+                path.Add(lines[indexStart]);
+                pathIndex.Add(indexStart);
+            }
+            return (indexStart == indexEnd);
+        }
+
+        public bool findPathCA12(double[] start, double[] end, out List<TimeLine> path)
+        {
+            path = new List<TimeLine>();
 
             TimeLine bestLineStart = null;
             double bestDistanceStart = double.PositiveInfinity;
@@ -112,28 +433,67 @@ namespace TimeCells
 
             int indexStart = lines.IndexOf(bestLineStart);
             int indexEnd = lines.IndexOf(bestLineEnd);
+            List<int> pathIndex = new List<int>();
 
+            path.Add(lines[indexStart]);
+            pathIndex.Add(indexStart);
 
-            PresentInput(start, false, false);
-            PropagateActivity();
-
-            bool pathFound = false;
-            while (pathFound)
+            for (int level = 0; level < timeLineSize; level++)
             {
-                //Get the current state
-                double[,] ss = GetActivitySnapshot();
-                //Add the goal as the "next" element
-                ss[0, indexEnd] = 0.75; //make it weaker that the current state to avoid backtraking from there
-
-                //Predict
-                ca1Network.modalities.First().reality = ss;
+                Console.WriteLine("\nLEVEL " + level);
+                //Generate the prediction for the goal
+                Array.Clear(ca1Network.modalities.First().reality, 0, ca1Network.modalities.First().reality.Length);
+                ca1Network.modalities.First().reality[indexEnd, level] = 1.0;
                 ca1Network.Converge();
                 ca1Network.Diverge();
-                double[,] pred = ca1Network.modalities.First().prediction;
+                double[,] goalPrediction = ca1Network.modalities.First().prediction.Clone() as double[,];
+                printActivity(goalPrediction, "From goal");
+                //Generate the prediction from the start
+                Array.Clear(ca1Network.modalities.First().reality, 0, ca1Network.modalities.First().reality.Length);
+                ca1Network.modalities.First().reality[indexStart, level] = 1.0;
+                ca1Network.Converge();
+                ca1Network.Diverge();
+                double[,] startPrediction = ca1Network.modalities.First().prediction.Clone() as double[,];
+                printActivity(startPrediction, "From start");
 
+                double[,] mixedPrediction = new double[lines.Count, timeLineSize];
+                CDZNET.Helpers.ArrayHelper.ForEach(mixedPrediction, true, (x, y) => { mixedPrediction[x, y] = goalPrediction[x, y] + startPrediction[x, y]; });
+                printActivity(mixedPrediction, "Mixture");
+
+                int bestLink = indexStart;
+                int bestLevel = 0;
+                double bestValue = 0;
+                for (int i = 0; i < timeLineSize; i++)
+                {
+                    for (int j = 0; j < lines.Count; j++)
+                    {
+                        if (mixedPrediction[bestLink, bestLevel] > mixedPrediction[j, i])
+                        {
+                            bestLevel = i;
+                            bestLink = j;
+                            bestValue = mixedPrediction[j, i];
+                            //Console.WriteLine("Best link found ");
+                        }
+                    }
+                    Console.WriteLine();
+                }
             }
+            return true;
+        }
 
-            return isPathComplete;
+        void printActivity(double[,] netAct, string label)
+        {
+            Console.WriteLine("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+            Console.WriteLine(label);
+            for (int i = 0; i < netAct.GetLength(1); i++)
+            {
+                for (int j = 0; j < netAct.GetLength(0); j++)
+                {
+                    Console.Write(netAct[j, i].ToString("N2") + '\t');
+                }
+                Console.WriteLine();
+            }
+            Console.WriteLine("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
         }
 
         #endregion CA1 Autoassociator
