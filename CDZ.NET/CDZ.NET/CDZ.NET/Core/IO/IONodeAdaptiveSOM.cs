@@ -75,7 +75,7 @@ namespace CDZNET.Core
                 ForEach(recurrentWeights, false, (x1, y1, x2, y2) => { recurrentWeights[x1, y1, x2, y2] = MathHelpers.Rand.NextDouble(); });
         }
 
-        public override void bottomUpAdaptation(object sender, EventArgs argsNull)
+        protected override void bottomUpAdaptation()
         {
             bool USE_DSOM = true;
             //Standard SOM
@@ -114,7 +114,7 @@ namespace CDZNET.Core
             //}
         }
 
-        public override void topDownAdaptation(object sender, EventArgs argsNull)
+        protected override void topDownAdaptation()
         {
             //Here could we self organize as the other direction ?
         }

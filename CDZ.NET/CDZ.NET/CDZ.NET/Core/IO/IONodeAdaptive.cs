@@ -12,20 +12,36 @@ namespace CDZNET.Core
     /// </summary>
     public class IONodeAdaptive:IONode
     {
+
         public IONodeAdaptive(Point2D inputDim, Point2D outputDim)
             : base(inputDim, outputDim)
         {
-            this.onBottomUp += bottomUpAdaptation;
-            this.onTopDown += topDownAdaptation;
+            this.onBottomUp += BottomUpAdaptation;
+            this.onTopDown += TopDownAdaptation;
         }
 
-        public virtual void bottomUpAdaptation(object sender, EventArgs argsNull)
+        protected virtual void bottomUpAdaptation()
         {
 
         }
-        public virtual void topDownAdaptation(object sender, EventArgs argsNull)
+        protected virtual void topDownAdaptation()
         {
 
+        }
+
+        public void BottomUpAdaptation(object sender, EventArgs argsNull)
+        {
+            if (!learningLocked)
+            {
+                bottomUpAdaptation();
+            }
+        }
+        public void TopDownAdaptation(object sender, EventArgs argsNull)
+        {
+            if (!learningLocked)
+            {
+                topDownAdaptation();
+            }
         }
 
         protected override void bottomUp()

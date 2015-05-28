@@ -17,11 +17,11 @@ namespace CDZNET.Core
         {
         }
 
-        public override void bottomUpAdaptation(object sender, EventArgs argsNull)
+        protected override void bottomUpAdaptation()
         {
 
         }
-        public override void topDownAdaptation(object sender, EventArgs argsNull)
+        protected override void topDownAdaptation()
         {
 
         }

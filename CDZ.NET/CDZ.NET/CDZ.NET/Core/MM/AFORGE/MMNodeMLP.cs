@@ -184,8 +184,6 @@ namespace CDZNET.Core
                     noChangeInErrorCount = 0;
                 }
             }
-
-
         }
     }
 }
