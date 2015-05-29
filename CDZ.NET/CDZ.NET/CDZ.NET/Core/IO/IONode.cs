@@ -116,6 +116,7 @@ namespace CDZNET.Core
                 Epoch(trainingSet, out outputMaxError, out inputMaxError);
                 if (onEpoch != null)
                     onEpoch(i, maximumEpochs, outputMaxError, inputMaxError);
+
             }
             return i;
         }

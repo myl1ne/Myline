@@ -47,7 +47,7 @@ namespace TimeCells
 
             List<Sequence> sequenceGoalDirected = new List<Sequence>() 
             { 
-                new Sequence() { c['c'], c['g'], c['k'], c['j'], c['i']  },
+                new Sequence() { c['c'], c['g'], c['k'], c['j'], c['i'] },
                 new Sequence() { c['c'], c['g'], c['k'], c['o'], c['s'] },
                 new Sequence() { c['c'], c['g'], c['k'], c['l'], c['m'] }            
             };
@@ -74,44 +74,44 @@ namespace TimeCells
             canvas.ScaleWeights();
             Console.WriteLine("Training over.");
 
-            foreach (Sequence s in setToUse)
-            {
-                string errorMsg = "\n\n ---------------------------------------- \n Sequence \n";
-                double seqMeanError = 0.0;
+            //foreach (Sequence s in setToUse)
+            //{
+            //    string errorMsg = "\n\n ---------------------------------------- \n Sequence \n";
+            //    double seqMeanError = 0.0;
 
-                canvas.Reset();
-                foreach (double[] item in s)
-                {
-                    if (item != s.First())
-                    {
-                        List<KeyValuePair<double[], double>> predictions = canvas.PredictAllStrict();
-                        double[] reality = item;
-                        double itemError = CDZNET.MathHelpers.distance(predictions.First().Key, reality);
-                        seqMeanError += itemError;
-                        errorMsg += "ActiveCells=" + canvas.getActiveCells().Count + "\n";
-                        errorMsg += "Reality \t" + c2[reality] + "\n";
-                        //errorMsg += "Predict \t"  + Convert(prediction, c2) + "\t";
-                        errorMsg += "Prediction TC \t";
-                        foreach (KeyValuePair<double[], double> pre in predictions)
-                        {
-                            errorMsg += Convert(pre.Key, c2) + "(" + pre.Value.ToString("N2") + ")" + " ";
-                        }
-                        errorMsg += "\nErrorTC   \t " + itemError;
+            //    canvas.Reset();
+            //    foreach (double[] item in s)
+            //    {
+            //        if (item != s.First())
+            //        {
+            //            List<KeyValuePair<double[], double>> predictions = canvas.PredictAllStrict();
+            //            double[] reality = item;
+            //            double itemError = CDZNET.MathHelpers.distance(predictions.First().Key, reality);
+            //            seqMeanError += itemError;
+            //            errorMsg += "ActiveCells=" + canvas.getActiveCells().Count + "\n";
+            //            errorMsg += "Reality \t" + c2[reality] + "\n";
+            //            //errorMsg += "Predict \t"  + Convert(prediction, c2) + "\t";
+            //            errorMsg += "Prediction TC \t";
+            //            foreach (KeyValuePair<double[], double> pre in predictions)
+            //            {
+            //                errorMsg += Convert(pre.Key, c2) + "(" + pre.Value.ToString("N2") + ")" + " ";
+            //            }
+            //            errorMsg += "\nErrorTC   \t " + itemError;
 
-                        List<KeyValuePair<double[], double>> predictionsCA1 = canvas.PredictAllCA1();
-                        errorMsg += "\nPrediction CA1 \t";
-                        foreach (KeyValuePair<double[], double> pre in predictionsCA1)
-                        {
-                            errorMsg += Convert(pre.Key, c2) + "(" + pre.Value.ToString("N2") + ")" + " ";
-                        }
-                        double itemErrorCA1 = CDZNET.MathHelpers.distance(predictionsCA1.First().Key, reality);
-                        errorMsg += "\nErrorCA1   \t " + itemErrorCA1 + "\n ---- \n";
-                    }
-                    canvas.PresentInput(item, false, false);
-                    canvas.PropagateActivity();
-                }
-                Console.WriteLine(errorMsg);
-            }
+            //            List<KeyValuePair<double[], double>> predictionsCA1 = canvas.PredictAllCA1();
+            //            errorMsg += "\nPrediction CA1 \t";
+            //            foreach (KeyValuePair<double[], double> pre in predictionsCA1)
+            //            {
+            //                errorMsg += Convert(pre.Key, c2) + "(" + pre.Value.ToString("N2") + ")" + " ";
+            //            }
+            //            double itemErrorCA1 = CDZNET.MathHelpers.distance(predictionsCA1.First().Key, reality);
+            //            errorMsg += "\nErrorCA1   \t " + itemErrorCA1 + "\n ---- \n";
+            //        }
+            //        canvas.PresentInput(item, false, false);
+            //        canvas.PropagateActivity();
+            //    }
+            //    Console.WriteLine(errorMsg);
+            //}
             Console.WriteLine("Press a key to continue...");
             Console.ReadKey();
 
@@ -127,6 +127,11 @@ namespace TimeCells
                 //new Sequence{c['c'], c['i']},
                 //new Sequence{c['c'], c['s']},
                 //new Sequence{c['c'], c['m']}
+                
+                new Sequence{c['a'], c['u']},
+                new Sequence{c['i'], c['q']},
+                new Sequence{c['a'], c['q']},
+                new Sequence{c['m'], c['i']},
 
                 new Sequence{c['q'], c['o']},
                 new Sequence{c['a'], c['k']},
@@ -139,14 +144,17 @@ namespace TimeCells
                 foreach (Sequence seq in pathToTest)
                 {
                     Console.WriteLine("From " + Convert(seq.First(), c2) + " to " + Convert(seq.Last(), c2));
-                    List<TimeLine> autoPath;
-                    bool pathFoundAuto = canvas.findPathGoalNetwork(seq.First(), seq.Last(), out autoPath);
-                    Console.WriteLine("Autoassociator path = " + pathToString(autoPath));
+                    //List<TimeLine> autoPath;
+                    //bool pathFoundAuto = canvas.findPathGoalNetwork(seq.First(), seq.Last(), out autoPath);
+                    //Console.WriteLine("Autoassociator path = " + pathToString(autoPath));
 
                     List<TimeLine> heteroPath;
                     bool pathFoundHetero = canvas.findPathGoalNetworkIO(seq.First(), seq.Last(), out heteroPath);
                     //canvas.findPath(c['a'], c['d'], out path);
                     Console.WriteLine("Heteroassociator path = " + pathToString(heteroPath));
+
+                    Console.WriteLine("Press a key to continue...");
+                    Console.ReadKey();
                 }
                 Console.WriteLine("Press a key to exit...");
                 Console.ReadKey();

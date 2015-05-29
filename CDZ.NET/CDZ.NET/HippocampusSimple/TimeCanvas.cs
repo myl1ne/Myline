@@ -19,8 +19,7 @@ namespace TimeCells
         private int inputSize;
 
         private List<TimeLine> lines = new List<TimeLine>();
-        private List<TimeLine> activeLines = new List<TimeLine>();
-
+        
         public DistanceFunction distanceFx;
 
         public delegate void DelegateProcessElement(double[] elt);
@@ -50,8 +49,17 @@ namespace TimeCells
             goalNetworkIO = new CDZNET.Core.IONodeAFMLP(
                 new CDZNET.Point2D(lines.Count, 2), //Input
                 new CDZNET.Point2D(lines.Count, 1), //Output
-                new int[] { 30, 20 },               //bottomup layers
-                new int[] { 30, 20 });              //topdown layers
+                new int[] { 30 },               //bottomup layers
+                new int[] { 30 });              //topdown layers
+
+            (goalNetworkIO as CDZNET.Core.IONodeAFMLP).skipTopDown = true;
+            goalNetworkIO.onEpoch += goalNetworkIO_onEpoch;
+        }
+
+        void goalNetworkIO_onEpoch(int currentEpoch, int maximumEpoch, double outputMaxError, double inputMaxError)
+        {
+            //if (currentEpoch % (maximumEpoch/100.0) == 0)
+                Console.WriteLine("Epoch " + currentEpoch + " / " + maximumEpoch + "\t Error = " + outputMaxError);
         }
 
         public void TrainGoalNetwork()
@@ -60,7 +68,7 @@ namespace TimeCells
             Console.WriteLine("Training GoalNet...");
             //goalNetwork.learningLocked = false;
             //int totalCycle2 = goalNetwork.Batch(goalTrainingElements, 500000, 0.01);
-            int totalCycle = goalNetworkIO.Batch(goalTrainingElementsIO, 500000, 0.01);
+            int totalCycle = goalNetworkIO.Batch(goalTrainingElementsIO, 1000000000, 0.1);
             goalNetworkIO.learningLocked = true;
             //goalNetwork.learningLocked = true;
             
@@ -190,6 +198,7 @@ namespace TimeCells
                 }
             }
         }
+
         public bool findPathGoalNetwork(double[] start, double[] end, out List<TimeLine> path)
         {
             path = new List<TimeLine>();
@@ -240,6 +249,7 @@ namespace TimeCells
 
         public bool findPathGoalNetworkIO(double[] start, double[] end, out List<TimeLine> path)
         {
+            Console.WriteLine("--> [findPath] Looking for a path from " + DEBUGConvert(start) + " to " + DEBUGConvert(end));
             path = new List<TimeLine>();
 
             TimeLine bestLineStart = null;
@@ -259,6 +269,7 @@ namespace TimeCells
             int indexEnd = lines.IndexOf(bestLineEnd);
             path.Add(lines[indexStart]);
 
+            int loopingCount = 0;
             while (indexStart != indexEnd)
             {
                 double[,] tripletInput = new double[lines.Count, 2]; //0 - current state //1 - goal
@@ -275,16 +286,59 @@ namespace TimeCells
                     if (pred[i, 0] > pred[bestIndex, 0])
                         bestIndex = i;
                 }
-                Console.WriteLine("Presenting triplet " + tripletToString(tripletInput, pred));
+                //Console.WriteLine("Presenting triplet " + tripletToString(tripletInput, pred));
 
-                indexStart = bestIndex;
-                //If we came back to a state that is already in the path we just give up
-                if (path.Contains(lines[indexStart]))
-                    return false;
+                //If the next element is invlaid, we treat it as a subgoal
+                TimeLine subStart = lines[indexStart];
+                TimeLine subEnd = lines[bestIndex];
+                if (!IsAccessible(subStart, subEnd) /*lines[indexStart].cells[1].next.ContainsKey(lines[bestIndex].cells[0])*/)
+                {
+                    Console.WriteLine("[Illegal move]");
+                    if (subStart.receptiveField == start && subEnd.receptiveField == end)
+                    {
+                        Console.WriteLine("ERROR Subgoal == endgoal. Network thinks he can reach in one step...");
+                        return false;
+                    }
+                    List<TimeLine> subPath;
+                    bool successSubpath = findPathGoalNetworkIO(subStart.receptiveField, subEnd.receptiveField, out subPath);   
+                    path.AddRange(subPath);
+                    if (!successSubpath)
+                        return false;
+                    indexStart = lines.IndexOf(path.Last());
+                }
+                else
+                {
+                    indexStart = bestIndex;
+
+                    //If we came back to a state that is already in the path we just give up
+                    if (path.Contains(lines[indexStart]))
+                    {
+                        loopingCount++;
+                        if (loopingCount > 3)
+                        {
+                            path.Add(lines[bestIndex]);
+                            Console.WriteLine("Abort due to circular path");
+                            return false;
+                        }
+                    }
+                }
                 path.Add(lines[bestIndex]);
             }
             return (indexStart == indexEnd);
         }
+
+        bool IsAccessible(TimeLine a, TimeLine b)
+        {
+            foreach (TimeCell c in b.cells[0].previous.Keys)
+            {
+                if (c.parentLine == a)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         #endregion
         #region CA1 Autoassociator
 
@@ -565,7 +619,6 @@ namespace TimeCells
             bool isFine = true;
 
             lines = new List<TimeLine>();
-            activeLines = new List<TimeLine>();
             timeLineSize = Convert.ToInt16(file.ReadLine());
             string patternsLine = file.ReadLine();
             string[] patterns = patternsLine.Split(new string[] { "(","),(", ")" }, StringSplitOptions.RemoveEmptyEntries);
@@ -638,11 +691,10 @@ namespace TimeCells
             {
                 l.Reset();
             }
-            activeLines.Clear();
         }
 
         public void Imprint(List<double[]> sequence, bool bidirectional = false)
-        { 
+        {
             //First convert all the element to their respective timeline
             List<TimeLine> tlSequence = new List<TimeLine>();
             foreach (double[] item in sequence)
@@ -662,7 +714,7 @@ namespace TimeCells
 
             //Second compute the relation among elements
             for (int oldestIndex = 0; oldestIndex < tlSequence.Count; oldestIndex++)
-			{
+            {
                 int elementsBelow = Math.Min(timeLineSize, tlSequence.Count - oldestIndex);
                 for (int level = 1; level < elementsBelow; level++)
                 {
@@ -684,13 +736,6 @@ namespace TimeCells
                         tlSequence[oldestIndex + level].cells[0].previous.Add(tlSequence[oldestIndex].cells[level], 1.0);
                     }
                 }
-			}
-
-            if (bidirectional)
-            {
-                List<double[]> reversedSequence = new List<double[]>(sequence);
-                reversedSequence.Reverse();
-                Imprint(reversedSequence, false);
             }
         }
 

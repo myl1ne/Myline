@@ -82,6 +82,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="PlaceCell.cs" />
     <Compile Include="TaxiCourse.cs" />
     <Compile Include="TimeCanvas.cs" />
     <Compile Include="TimeCell.cs" />

@@ -29,6 +29,7 @@ namespace CDZNET.Core
         private ParallelResilientBackpropagationLearning topDownTeacher;
         private double initialStep = 0.0125;
         public double sigmoidAlphaValue = 2.0;
+        public bool skipTopDown = false;
 
         /// <summary>
         /// Constructs a new SOM node.
@@ -78,9 +79,12 @@ namespace CDZNET.Core
         /// <param name="argsNull"></param>
         protected override void topDownAdaptation()
         {
-            double[] lInput = ArrayHelper.linearize(input.reality);
-            double[] lOutput = ArrayHelper.linearize(output.reality);
-            topDownTeacher.Run(lOutput, lInput);
+            if (!skipTopDown)
+            {
+                double[] lInput = ArrayHelper.linearize(input.reality);
+                double[] lOutput = ArrayHelper.linearize(output.reality);
+                topDownTeacher.Run(lOutput, lInput);
+            }
         }
 
         protected override void bottomUp()
@@ -92,9 +96,12 @@ namespace CDZNET.Core
 
         protected override void topDown()
         {
-            double[] lOutput = ArrayHelper.linearize(output.reality);
-            double[] lInput = topDownNet.Compute(lOutput);
-            ArrayHelper.unlinearize(lInput, input.prediction);
+            if (!skipTopDown)
+            {
+                double[] lOutput = ArrayHelper.linearize(output.reality);
+                double[] lInput = topDownNet.Compute(lOutput);
+                ArrayHelper.unlinearize(lInput, input.prediction);
+            }
         }
 
         /// <summary>
@@ -147,13 +154,17 @@ namespace CDZNET.Core
                 samplesOutput[i] = ArrayHelper.linearize(trainingSet[i].Value);
             }
 
-            bottomUpTeacher.RunEpoch(samplesInput, samplesOutput);
-            //topDownTeacher.RunEpoch(samplesOutput, samplesInput);
+            double AFError = bottomUpTeacher.RunEpoch(samplesInput, samplesOutput);
+            if (!skipTopDown)
+                topDownTeacher.RunEpoch(samplesOutput, samplesInput);
 
             //Run manually a base class epoch to have the exact same error measurement as other algos
-            learningLocked = true;
-            base.Epoch(trainingSet, out outputMaxError, out inputMaxError);
-            learningLocked = false;
+            //learningLocked = true;
+            //base.Epoch(trainingSet, out outputMaxError, out inputMaxError);
+            //learningLocked = false;
+
+            //HACK to remove
+            outputMaxError = inputMaxError = AFError;
         }
     }
 }
