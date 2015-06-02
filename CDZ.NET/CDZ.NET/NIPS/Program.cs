@@ -49,52 +49,7 @@ namespace NIPS
 
     class Program
     {
-        //static List<int> ValidMoves(int state)
-        //{
-        //    switch (state)
-        //    {
-        //        case 0: return new List<int>(){1,5};
-        //        case 1: return new List<int>(){0,2};
-        //        case 2: return new List<int>(){1,3,6};
-        //        case 3: return new List<int>(){2,4};
-        //        case 4: return new List<int>(){3,7};
-        //        case 5: return new List<int>(){0,8};
-        //        case 6: return new List<int>(){2,10};
-        //        case 7: return new List<int>(){4,12};
-        //        case 8: return new List<int>(){5,9,13};
-        //        case 9: return new List<int>(){8,10};
-        //        case 10: return new List<int>(){6,9,11,14};
-        //        case 11: return new List<int>(){10,12};
-        //        case 12: return new List<int>(){7,11,15};
-        //        case 13: return new List<int>(){8,16};
-        //        case 14: return new List<int>(){10,18};
-        //        case 15: return new List<int>(){12,20};
-        //        case 16: return new List<int>(){13,17};
-        //        case 17: return new List<int>(){16,18};
-        //        case 18: return new List<int>(){14,17,19};
-        //        case 19: return new List<int>(){18,20};
-        //        case 20: return new List<int>(){15,19};
-        //        default:return new List<int>(){};
-        //    }
-        //}
-
-        //static int statesCount = 21;
-        //static int CountStates(List<Sequence> trainingSet)
-        //{
-        //    return 21;
-            
-        //    List<int> allElements = new List<int>();
-        //    foreach (Sequence item in trainingSet)
-        //    {
-        //        for (int i = 0; i < item.Count; i++)
-        //        {
-        //            if (!allElements.Contains(item[i]))
-        //                allElements.Add(item[i]);
-        //        }
-        //    }
-        //    return allElements.Count;
-        //}
-
+        
         static List<Triplet> GetTripletsFromSequence(Sequence s)
         {
             List<Triplet> results = new List<Triplet>();
@@ -126,7 +81,7 @@ namespace NIPS
             }
             return results;
         }
-        static double[] OneHot(int i)
+        static double[] OneHot(int i, int statesCount)
         {
             double[] code = new double[statesCount];
             for (int j = 0; j < statesCount; j++)
@@ -139,59 +94,32 @@ namespace NIPS
             }
             return code;
         }
-        static void GetTrainingSet(List<Triplet> triplets, out double[][] input, out double[][] output)
+        static void GetTrainingSet(Maze maze, List<Triplet> triplets, out double[][] input, out double[][] output)
         {
             input = new double[triplets.Count][];
             output = new double[triplets.Count][];
 
             for (int i = 0; i < triplets.Count; i++)
             {
-                double[] x0 = OneHot(triplets[i].x0);
-                double[] g = OneHot(triplets[i].g);
+                double[] x0 = OneHot(triplets[i].x0, maze.StatesCount);
+                double[] g = OneHot(triplets[i].g, maze.StatesCount);
                 input[i] = x0.Concat(g).ToArray();
-                output[i] = OneHot(triplets[i].x1);
+                output[i] = OneHot(triplets[i].x1, maze.StatesCount);
             }
-
-            //if (performOrthogonalization)
-            //{
-            //    //Transform input to column matrix
-            //    double[,] columnMatrix = new double[statesCount, triplets.Count];
-            //    for (int i = 0; i < statesCount; i++)
-            //    {
-            //         for (int j = 0; j < triplets.Count; j++)
-            //        {
-            //            columnMatrix[i,j] = input[j][i];
-            //        }
-            //    }
-
-            //    //Perform Gram Schmidt ortho 
-            //    GramSchmidtOrthogonalization gsorth = new GramSchmidtOrthogonalization(columnMatrix);
-            //    double[,] Q = gsorth.OrthogonalFactor;
-            //    double[,] R = gsorth.UpperTriangularFactor;
-
-            //    //Back to original input format
-            //    for (int i = 0; i < statesCount; i++)
-            //    {
-            //        for (int j = 0; j < triplets.Count; j++)
-            //        {
-            //            input[j][i] = Q[i,j];
-            //        }
-            //    }
-            //}
         }
-        static void GetTrainingSet(List<Triplet> triplets, out double[][] io)
+        static void GetTrainingSet(Maze maze, List<Triplet> triplets, out double[][] io)
         {
             io = new double[triplets.Count][];
 
             for (int i = 0; i < triplets.Count; i++)
             {
-                double[] x0 = OneHot(triplets[i].x0);
-                double[] g = OneHot(triplets[i].g);
-                double[] x1 = OneHot(triplets[i].x1);
+                double[] x0 = OneHot(triplets[i].x0, maze.StatesCount);
+                double[] g = OneHot(triplets[i].g, maze.StatesCount);
+                double[] x1 = OneHot(triplets[i].x1, maze.StatesCount);
                 io[i] = x0.Concat(g).ToArray().Concat(x1).ToArray();
             }
         }
-        static bool FindPath(ActivationNetwork network, int start, int end, ref List<int> path, bool hidePrintout = false)
+        static bool FindPath(Maze maze, ActivationNetwork network, int start, int end, ref List<int> path, bool hidePrintout = false)
         {
             if (path.Count()>0 && path.Last() != start)
                 path.Add(start);
@@ -200,8 +128,8 @@ namespace NIPS
 
             while (current != goal)
             {
-                double[] x0 = OneHot(current);
-                double[] g = OneHot(goal);
+                double[] x0 = OneHot(current,maze.StatesCount);
+                double[] g = OneHot(goal, maze.StatesCount);
                 double[] input = x0.Concat(g).ToArray();
                 double[] output = network.Compute(input);
                 
@@ -221,7 +149,7 @@ namespace NIPS
                     return false;
                 }
 
-                List<int> validMoves = ValidMoves(current);
+                List<int> validMoves = maze.ValidMoves(current);
                 if (!validMoves.Contains(maxIndex))
                 {
                     if (!hidePrintout)
@@ -235,7 +163,7 @@ namespace NIPS
                             Console.WriteLine("Subgoal infinite loop (" + current + "-->" + maxIndex + ")");
                         return false;
                     }
-                    FindPath(network, current, maxIndex, ref path, hidePrintout);
+                    FindPath(maze, network, current, maxIndex, ref path, hidePrintout);
                     if (path.Count()>0 && path.Last() == maxIndex)
                     {
                         if (!hidePrintout)
@@ -257,7 +185,7 @@ namespace NIPS
             }
             return true;
         }
-        static bool FindPath(DistanceNetwork network, int start, int end, ref List<int> path, bool hidePrintout = false)
+        static bool FindPath(Maze maze, DistanceNetwork network, int start, int end, ref List<int> path, bool hidePrintout = false)
         {
             if (path.Count() > 0 && path.Last() != start)
                 path.Add(start);
@@ -266,17 +194,17 @@ namespace NIPS
 
             while (current != goal)
             {
-                double[] x0 = OneHot(start);
-                double[] g = OneHot(goal);
-                double[] x1 = new double[statesCount]; //empty
+                double[] x0 = OneHot(start, maze.StatesCount);
+                double[] g = OneHot(goal, maze.StatesCount);
+                double[] x1 = new double[maze.StatesCount]; //empty
                 double[] input = x0.Concat(g).ToArray().Concat(x1).ToArray();
                 double[] output = network.Compute(input);
 
-                int maxIndex = statesCount * 2;
-                for (int i = 0; i < statesCount; i++)
+                int maxIndex = maze.StatesCount * 2;
+                for (int i = 0; i < maze.StatesCount; i++)
                 {
-                    if (output[statesCount * 2 + i] > output[maxIndex])
-                        maxIndex = statesCount * 2 + i;
+                    if (output[maze.StatesCount * 2 + i] > output[maxIndex])
+                        maxIndex = maze.StatesCount * 2 + i;
                 }
 
                 if (maxIndex == current)
@@ -292,7 +220,7 @@ namespace NIPS
                     return false;
                 }
 
-                List<int> validMoves = ValidMoves(current);
+                List<int> validMoves = maze.ValidMoves(current);
                 if (!validMoves.Contains(maxIndex))
                 {
                     if (!hidePrintout)
@@ -306,7 +234,7 @@ namespace NIPS
                             Console.WriteLine("Subgoal infinite loop (" + current + "-->" + maxIndex + ")");
                         return false;
                     }
-                    FindPath(network, current, maxIndex, ref path, hidePrintout);
+                    FindPath(maze, network, current, maxIndex, ref path, hidePrintout);
                     if (path.Count() > 0 && path.Last() == maxIndex)
                     {
                         if (!hidePrintout)
@@ -328,12 +256,12 @@ namespace NIPS
             }
             return true;
         }
-        static void GenerateReport(List<Triplet> triplets, ActivationNetwork network)
+        static void GenerateReport(Maze maze, List<Triplet> triplets, ActivationNetwork network)
         {
             foreach (Triplet t in triplets)
             {
-                double[] x0 = OneHot(t.x0);
-                double[] g = OneHot(t.g);
+                double[] x0 = OneHot(t.x0,maze.StatesCount);
+                double[] g = OneHot(t.g, maze.StatesCount);
                 double[] input = x0.Concat(g).ToArray();
                 double[] output = network.Compute(input);
                 double maxValue = output.Max();
@@ -345,21 +273,21 @@ namespace NIPS
                 }
             }
         }
-        static void GenerateReport(List<Triplet> triplets, DistanceNetwork network)
+        static void GenerateReport(Maze maze, List<Triplet> triplets, DistanceNetwork network)
         {
             foreach (Triplet t in triplets)
             {
-                double[] x0 = OneHot(t.x0);
-                double[] g = OneHot(t.g);
-                double[] x1 = new double[statesCount]; //empty
+                double[] x0 = OneHot(t.x0, maze.StatesCount);
+                double[] g = OneHot(t.g, maze.StatesCount);
+                double[] x1 = new double[maze.StatesCount]; //empty
                 double[] input = x0.Concat(g).ToArray().Concat(x1).ToArray();
                 double[] output = network.Compute(input);
 
-                int maxIndex = statesCount * 2;
-                for (int i = 0; i < statesCount; i++)
+                int maxIndex = maze.StatesCount * 2;
+                for (int i = 0; i < maze.StatesCount; i++)
                 {
-                    if (output[statesCount * 2 + i] > output[maxIndex])
-                        maxIndex = statesCount * 2 + i;
+                    if (output[maze.StatesCount * 2 + i] > output[maxIndex])
+                        maxIndex = maze.StatesCount * 2 + i;
                 }
                 if (maxIndex != t.x1)
                 {
@@ -368,12 +296,12 @@ namespace NIPS
                 }
             }
         }
-        static void ReportPath(ActivationNetwork network, int start, int end)
+        static void ReportPath(Maze maze, ActivationNetwork network, int start, int end)
         {
             Console.WriteLine("From " + start + " to " + end);
 
             List<int> path = new List<int>();
-            bool pathFound = FindPath(network, start, end, ref path);
+            bool pathFound = FindPath(maze, network, start, end, ref path);
 
             string pathStr = "Computed path = ";
             foreach (int step in path)
@@ -382,12 +310,12 @@ namespace NIPS
             }
             Console.WriteLine(pathStr);
         }
-        static void ReportPath(DistanceNetwork network, int start, int end)
+        static void ReportPath(Maze maze, DistanceNetwork network, int start, int end)
         {
             Console.WriteLine("From " + start + " to " + end);
 
             List<int> path = new List<int>();
-            bool pathFound = FindPath(network, start, end, ref path);
+            bool pathFound = FindPath(maze, network, start, end, ref path);
 
             string pathStr = "Computed path = ";
             foreach (int step in path)
@@ -397,40 +325,47 @@ namespace NIPS
             Console.WriteLine(pathStr);
         }
 
-        static List<Sequence> GenerateRandomSequences(int count, int lenght)
+        static void ChooseRandomPair(out int start, out int end, Maze maze, List<Triplet> trainingSet, bool canBeSamePoint, bool canBePartOfTrainingSet)
         {
             Random rand = new Random();
-            List<Sequence> seqs = new List<Sequence>();
-            for (int i = 0; i < count; i++)
+
+            start = rand.Next(maze.StatesCount);
+            end = rand.Next(maze.StatesCount);
+
+            if (!canBeSamePoint)
             {
-                Sequence s = new Sequence();
-                int start = rand.Next(statesCount);
-                s.Add(start);
-                while(s.Count <lenght)
-                {
-                    List<int> neighboors = ValidMoves(s.Last());
-                    int next = neighboors[rand.Next(neighboors.Count)];
-                    while (s.Count > 2 && next == s[s.Count - 2])
-                    {
-                        next = neighboors[rand.Next(neighboors.Count)];
-                    }
-                    s.Add(next);
-                }
-                Console.WriteLine("Rnd Seq = " + s.ToString());
-                seqs.Add(s);
+                while (start == end)
+                    end = rand.Next(maze.StatesCount);
             }
-            return seqs;
+
+            if (!canBePartOfTrainingSet)
+            {
+                bool found = true;
+                while (found)
+                {
+                    found = false;
+                    start = rand.Next(maze.StatesCount);
+                    end = rand.Next(maze.StatesCount);
+                    foreach (Triplet t in trainingSet)
+                    {
+                        found = (t.x0 == start && t.g == end);
+                        if (found)
+                            break;
+                    }
+                }
+            }
         }
+
         static void Main(string[] args)
         {
             Maze maze;
             List<Sequence> setToUse;
-            //List<Sequence> 
-            List<Sequence> setToUse = GenerateRandomSequences(10, 7);
+            Generate_21(out maze, out setToUse);
+            //Generate_T(out maze, out setToUse);
 
             //Prepare the data
             bool forceBidirectionality = true;
-            statesCount = CountStates(setToUse);
+
             List<Triplet> triplets = GetTripletsFromSequences(setToUse, forceBidirectionality);
             foreach (Triplet item in triplets)
             {
@@ -439,20 +374,20 @@ namespace NIPS
 
             double[][] input;
             double[][] output;
-            GetTrainingSet(triplets, out input, out output);
+            GetTrainingSet(maze, triplets, out input, out output);
             double[][] io;
-            GetTrainingSet(triplets, out io);
+            GetTrainingSet(maze, triplets, out io);
 
             bool useAutoAssociativeNetwork = false;
 
             if (!useAutoAssociativeNetwork)
             {
                 //Create the network & train
-                ActivationNetwork goalNetwork = goalNetwork = new ActivationNetwork(new SigmoidFunction(2.0), 2 * statesCount, 20, 10, statesCount);
+                ActivationNetwork goalNetwork = goalNetwork = new ActivationNetwork(new SigmoidFunction(2.0), 2 * maze.StatesCount, 20, maze.StatesCount);
                 ParallelResilientBackpropagationLearning goalTeacher = new ParallelResilientBackpropagationLearning(goalNetwork);
 
                 double error = double.PositiveInfinity;
-                double stopError = 1.0;
+                double stopError = 10.0;
                 while (error > stopError)
                 {
                     Console.WriteLine("Reset");
@@ -464,7 +399,7 @@ namespace NIPS
                         Console.WriteLine("Epoch " + epoch + " = \t" + error);
                     }
                 }
-                GenerateReport(triplets, goalNetwork);
+                GenerateReport(maze, triplets, goalNetwork);
                 goalNetwork.Save("goalNetwork.mlp");
                 //Test the network
                 Console.WriteLine("------------------");
@@ -474,9 +409,9 @@ namespace NIPS
                 Console.WriteLine("TRAINED SEQUENCES");
                 foreach (Sequence seq in setToUse)
                 {
-                    ReportPath(goalNetwork, seq.First(), seq.Last());
-                    Console.WriteLine("Press a key to continue...");
-                    Console.ReadKey();
+                    ReportPath(maze, goalNetwork, seq.First(), seq.Last());
+                    //Console.WriteLine("Press a key to continue...");
+                    //Console.ReadKey();
                 }
                 Console.WriteLine("------------------");
                 Console.WriteLine("RANDOM SEQUENCES");
@@ -487,7 +422,9 @@ namespace NIPS
                 for (int i = 0; i < RANDOM_TRIALS; i++)
                 {
                     List<int> path = new List<int>();
-                    if (FindPath(goalNetwork, rand.Next(statesCount), rand.Next(statesCount), ref path, true))
+                    int startIndex,endIndex;
+                    ChooseRandomPair(out startIndex, out endIndex, maze, triplets, false, false);
+                    if (FindPath(maze, goalNetwork, startIndex, endIndex, ref path, true))
                         success++;
                 }
                 Console.WriteLine("Success percentage over " + RANDOM_TRIALS + " = " + (100.0 * success / (double)RANDOM_TRIALS) + "%");
@@ -496,13 +433,13 @@ namespace NIPS
                 {
                     Console.WriteLine("Press a key to continue...");
                     Console.ReadKey();
-                    ReportPath(goalNetwork, rand.Next(statesCount), rand.Next(statesCount));
+                    ReportPath(maze, goalNetwork, rand.Next(maze.StatesCount), rand.Next(maze.StatesCount));
                 }
                 Console.WriteLine("Finding paths, over.");
             }
             else //AUTO ASSOCIATIVE
             {
-                DistanceNetwork goalNetworkAuto = new DistanceNetwork(3 * statesCount, 400);
+                DistanceNetwork goalNetworkAuto = new DistanceNetwork(3 * maze.StatesCount, 400);
                 SOMLearning goalTeacherAuto = new SOMLearning(goalNetworkAuto);
                 goalTeacherAuto.LearningRate = 0.3;
                 goalTeacherAuto.LearningRadius = 5;
@@ -519,7 +456,7 @@ namespace NIPS
                         Console.WriteLine("Epoch " + epoch + " = \t" + error);
                     }
                 }
-                GenerateReport(triplets, goalNetworkAuto);
+                GenerateReport(maze, triplets, goalNetworkAuto);
 
                 //Test the network
                 Console.WriteLine("------------------");
@@ -529,9 +466,9 @@ namespace NIPS
                 Console.WriteLine("TRAINED SEQUENCES");
                 foreach (Sequence seq in setToUse)
                 {
-                    ReportPath(goalNetworkAuto, seq.First(), seq.Last());
-                    Console.WriteLine("Press a key to continue...");
-                    Console.ReadKey();
+                    ReportPath(maze, goalNetworkAuto, seq.First(), seq.Last());
+                    //Console.WriteLine("Press a key to continue...");
+                    //Console.ReadKey();
                 }
                 Console.WriteLine("------------------");
                 Console.WriteLine("RANDOM SEQUENCES");
@@ -542,7 +479,9 @@ namespace NIPS
                 for (int i = 0; i < RANDOM_TRIALS; i++)
                 {
                     List<int> path = new List<int>();
-                    if (FindPath(goalNetworkAuto, rand.Next(statesCount), rand.Next(statesCount), ref path, true))
+                    int startIndex, endIndex;
+                    ChooseRandomPair(out startIndex, out endIndex, maze, triplets, false, false);
+                    if (FindPath(maze, goalNetworkAuto, startIndex, endIndex, ref path, true))
                         success++;
                 }
                 Console.WriteLine("Success percentage over " + RANDOM_TRIALS + " = " + (100.0 * success / (double)RANDOM_TRIALS) + "%");
@@ -551,13 +490,13 @@ namespace NIPS
                 {
                     Console.WriteLine("Press a key to continue...");
                     Console.ReadKey();
-                    ReportPath(goalNetworkAuto, rand.Next(statesCount), rand.Next(statesCount));
+                    ReportPath(maze, goalNetworkAuto, rand.Next(maze.StatesCount), rand.Next(maze.StatesCount));
                 }
                 Console.WriteLine("Finding paths, over.");
             }
         }
 
-        void Generate_21(out Maze maze, out List<Sequence> trainingSet)
+        static void Generate_21(out Maze maze, out List<Sequence> trainingSet)
         {
             maze = new Maze
             (
@@ -616,7 +555,54 @@ namespace NIPS
 
             List<Sequence> rndSequence = maze.GenerateRandomSequences(10,2);
 
-            trainingSet = sequenceGoalDirected;
+            trainingSet = sequenceShortcuts;// sequenceGoalDirected;
+        }
+
+        static void Generate_T(out Maze maze, out List<Sequence> trainingSet)
+        {
+            maze = new Maze
+            (
+                new double[,]
+                {
+                    //0 1  2  3  4  5  6
+                    {0, 1, 0, 0, 0, 0, 0},//0
+                    {1, 0, 1, 0, 0, 0, 0},//1
+                    {0, 1, 0, 1, 0, 1, 0},//2
+                    {0, 0, 1, 0, 1, 0, 0},//3
+                    {0, 0, 0, 1, 0, 0, 0},//4
+                    {0, 0, 1, 0, 0, 0, 1},//5
+                    {0, 0, 0, 0, 0, 1, 0},//6
+                }
+            );
+
+            //Training set
+            List<Sequence> sequence_length1_full_coverage = new List<Sequence>() 
+            { 
+                new Sequence() { 0,1 },
+                new Sequence() { 1,2 },
+                new Sequence() { 2,3 },
+                new Sequence() { 3,4 },
+                new Sequence() { 2,5 },
+                new Sequence() { 5,6 },           
+            };
+
+            List<Sequence> sequence_length2_full_coverage = new List<Sequence>() 
+            { 
+                new Sequence() { 0,1,2 },
+                new Sequence() { 2,3,4 },
+                new Sequence() { 4,5,6 }            
+            };
+
+            List<Sequence> sequence_fullCoverage_overlap = new List<Sequence>() 
+            { 
+                new Sequence() { 0,1,2,3,4 }, 
+                new Sequence() { 4,3,2,5,6 },           
+            };
+
+
+            List<Sequence> rndSequence = maze.GenerateRandomSequences(10, 2);
+
+            trainingSet = sequence_fullCoverage_overlap;// sequence_length2_full_coverage;
         }
     }
 }

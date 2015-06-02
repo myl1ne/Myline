@@ -12,7 +12,7 @@ namespace NIPS
 
         public int StatesCount {get{return AdjMatrix.GetLength(0);}}
 
-        List<int> ValidMoves(int state)
+        public List<int> ValidMoves(int state)
         {
             List<int> vm = new List<int>(StatesCount);
             for (int i = 0; i < StatesCount; i++)
@@ -25,7 +25,7 @@ namespace NIPS
 
         public Maze(double[,] adjMatrix)
         {
-            if (AdjMatrix.GetLength(0)!=AdjMatrix.GetLength(1))
+            if (adjMatrix.GetLength(0) != adjMatrix.GetLength(1))
                 throw new Exception("The matrix needs to be squared.");
             this.AdjMatrix = adjMatrix.Clone() as double[,];
         }
@@ -53,6 +53,13 @@ namespace NIPS
                 seqs.Add(s);
             }
             return seqs;
+        }
+
+        List<int> GetShortestPath(int start, int end)
+        {
+            List<int> path = new List<int>();
+
+            return path;
         }
     }
 }
