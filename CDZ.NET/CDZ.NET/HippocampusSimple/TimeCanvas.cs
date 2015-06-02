@@ -49,17 +49,25 @@ namespace TimeCells
             goalNetworkIO = new CDZNET.Core.IONodeAFMLP(
                 new CDZNET.Point2D(lines.Count, 2), //Input
                 new CDZNET.Point2D(lines.Count, 1), //Output
-                new int[] { 30 },               //bottomup layers
-                new int[] { 30 });              //topdown layers
+                new int[] { 30, 10 },               //bottomup layers
+                new int[] { 1 });              //topdown layers
 
             (goalNetworkIO as CDZNET.Core.IONodeAFMLP).skipTopDown = true;
+
+            //Messages
+            goalNetwork.onEpoch += goalNetwork_onEpoch;
             goalNetworkIO.onEpoch += goalNetworkIO_onEpoch;
+        }
+
+        void goalNetwork_onEpoch(int currentEpoch, int maximumEpoch, Dictionary<CDZNET.Core.Signal, double> modalitiesMSE, double MSE)
+        {
+            Console.WriteLine("AutoAsso Epoch " + currentEpoch + " / " + maximumEpoch + "\t Error = " + MSE);
         }
 
         void goalNetworkIO_onEpoch(int currentEpoch, int maximumEpoch, double outputMaxError, double inputMaxError)
         {
             //if (currentEpoch % (maximumEpoch/100.0) == 0)
-                Console.WriteLine("Epoch " + currentEpoch + " / " + maximumEpoch + "\t Error = " + outputMaxError);
+                Console.WriteLine("Hetero Epoch " + currentEpoch + " / " + maximumEpoch + "\t Error = " + outputMaxError);
         }
 
         public void TrainGoalNetwork()
@@ -67,10 +75,12 @@ namespace TimeCells
             DisplayTrainingSetGoal();
             Console.WriteLine("Training GoalNet...");
             //goalNetwork.learningLocked = false;
-            //int totalCycle2 = goalNetwork.Batch(goalTrainingElements, 500000, 0.01);
-            int totalCycle = goalNetworkIO.Batch(goalTrainingElementsIO, 1000000000, 0.1);
+            //int totalCycle2 = goalNetwork.Batch(goalTrainingElements, 5000, 0.5);
+            //Console.WriteLine("Key?"); Console.ReadKey();
+            int totalCycle = goalNetworkIO.Batch(goalTrainingElementsIO, 5000, 0.5);
+            Console.WriteLine("Key?"); Console.ReadKey();
             goalNetworkIO.learningLocked = true;
-            //goalNetwork.learningLocked = true;
+            goalNetwork.learningLocked = true;
             
             //goalNetwork.learningLocked = true;
             Console.WriteLine("Achieved in " + totalCycle);

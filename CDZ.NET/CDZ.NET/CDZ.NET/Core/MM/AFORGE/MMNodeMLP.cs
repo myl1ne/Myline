@@ -157,12 +157,19 @@ namespace CDZNET.Core
                 samples[i] = concatenateTrainingSample(trainingSet[i]);
             }
 
-            teacher.RunEpoch(samples, samples);
+            double AFError = teacher.RunEpoch(samples, samples);
 
             //Run manually a base class epoch to have the exact same error measurement as other algos
-            learningLocked = true;
-            base.Epoch(trainingSet, out modalitiesMeanSquarredError, out globalMeanSquarred);
-            learningLocked = false;
+            //learningLocked = true;
+            //base.Epoch(trainingSet, out modalitiesMeanSquarredError, out globalMeanSquarred);
+            //learningLocked = false;
+
+            //HACK to remove ----------------------------------------
+            globalMeanSquarred = AFError;
+            modalitiesMeanSquarredError = new Dictionary<Signal, double>();
+            foreach (Signal s in modalities)
+                modalitiesMeanSquarredError[s] = AFError;
+            // ----------------------------------------
 
             //Deal with stuck issues
 
