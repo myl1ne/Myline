@@ -40,6 +40,10 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\..\..\..\..\..\Program Files (x86)\Accord.NET\Framework\Release\Accord.MachineLearning.dll</HintPath>
     </Reference>
+    <Reference Include="Accord.Math, Version=2.11.0.0, Culture=neutral, PublicKeyToken=fa1a88e29555ccf7, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>C:\Program Files (x86)\Accord.NET\Framework\Release\Accord.Math.dll</HintPath>
+    </Reference>
     <Reference Include="Accord.Neuro, Version=2.11.0.0, Culture=neutral, PublicKeyToken=fa1a88e29555ccf7, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\..\..\..\..\..\Program Files (x86)\Accord.NET\Framework\Release\Accord.Neuro.dll</HintPath>

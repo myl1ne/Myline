@@ -13,6 +13,9 @@ using Accord.Neuro.Learning;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 
+using Accord.Math.Decompositions;
+using Accord.Math;
+
 namespace NIPS
 {
     [Serializable]
@@ -46,52 +49,51 @@ namespace NIPS
 
     class Program
     {
-        static List<int> ValidMoves(int state)
-        {
-            switch (state)
-	        {
-                case 0: return new List<int>(){1,5};
-                case 1: return new List<int>(){0,2};
-                case 2: return new List<int>(){1,3,6};
-                case 3: return new List<int>(){2,4};
-                case 4: return new List<int>(){3,7};
-                case 5: return new List<int>(){0,8};
-                case 6: return new List<int>(){2,10};
-                case 7: return new List<int>(){4,12};
-                case 8: return new List<int>(){5,9,13};
-                case 9: return new List<int>(){8,10};
-                case 10: return new List<int>(){6,9,11,14};
-                case 11: return new List<int>(){10,12};
-                case 12: return new List<int>(){7,11,15};
-                case 13: return new List<int>(){8,16};
-                case 14: return new List<int>(){10,18};
-                case 15: return new List<int>(){12,20};
-                case 16: return new List<int>(){13,17};
-                case 17: return new List<int>(){16,18};
-                case 18: return new List<int>(){14,17,19};
-                case 19: return new List<int>(){18,20};
-                case 20: return new List<int>(){15,19};
-		        default:return new List<int>(){};
-	        }
-        }
+        //static List<int> ValidMoves(int state)
+        //{
+        //    switch (state)
+        //    {
+        //        case 0: return new List<int>(){1,5};
+        //        case 1: return new List<int>(){0,2};
+        //        case 2: return new List<int>(){1,3,6};
+        //        case 3: return new List<int>(){2,4};
+        //        case 4: return new List<int>(){3,7};
+        //        case 5: return new List<int>(){0,8};
+        //        case 6: return new List<int>(){2,10};
+        //        case 7: return new List<int>(){4,12};
+        //        case 8: return new List<int>(){5,9,13};
+        //        case 9: return new List<int>(){8,10};
+        //        case 10: return new List<int>(){6,9,11,14};
+        //        case 11: return new List<int>(){10,12};
+        //        case 12: return new List<int>(){7,11,15};
+        //        case 13: return new List<int>(){8,16};
+        //        case 14: return new List<int>(){10,18};
+        //        case 15: return new List<int>(){12,20};
+        //        case 16: return new List<int>(){13,17};
+        //        case 17: return new List<int>(){16,18};
+        //        case 18: return new List<int>(){14,17,19};
+        //        case 19: return new List<int>(){18,20};
+        //        case 20: return new List<int>(){15,19};
+        //        default:return new List<int>(){};
+        //    }
+        //}
 
-        static int statesCount = 21;
-
-        static int CountStates(List<Sequence> trainingSet)
-        {
-            return 21;
+        //static int statesCount = 21;
+        //static int CountStates(List<Sequence> trainingSet)
+        //{
+        //    return 21;
             
-            List<int> allElements = new List<int>();
-            foreach (Sequence item in trainingSet)
-            {
-                for (int i = 0; i < item.Count; i++)
-                {
-                    if (!allElements.Contains(item[i]))
-                        allElements.Add(item[i]);
-                }
-            }
-            return allElements.Count;
-        }
+        //    List<int> allElements = new List<int>();
+        //    foreach (Sequence item in trainingSet)
+        //    {
+        //        for (int i = 0; i < item.Count; i++)
+        //        {
+        //            if (!allElements.Contains(item[i]))
+        //                allElements.Add(item[i]);
+        //        }
+        //    }
+        //    return allElements.Count;
+        //}
 
         static List<Triplet> GetTripletsFromSequence(Sequence s)
         {
@@ -109,7 +111,6 @@ namespace NIPS
             }
             return results;
         }
-
         static List<Triplet> GetTripletsFromSequences(List<Sequence> ss, bool forceBidirectionality)
         {
             List<Triplet> results = new List<Triplet>();
@@ -125,7 +126,6 @@ namespace NIPS
             }
             return results;
         }
-
         static double[] OneHot(int i)
         {
             double[] code = new double[statesCount];
@@ -139,7 +139,6 @@ namespace NIPS
             }
             return code;
         }
-
         static void GetTrainingSet(List<Triplet> triplets, out double[][] input, out double[][] output)
         {
             input = new double[triplets.Count][];
@@ -152,6 +151,33 @@ namespace NIPS
                 input[i] = x0.Concat(g).ToArray();
                 output[i] = OneHot(triplets[i].x1);
             }
+
+            //if (performOrthogonalization)
+            //{
+            //    //Transform input to column matrix
+            //    double[,] columnMatrix = new double[statesCount, triplets.Count];
+            //    for (int i = 0; i < statesCount; i++)
+            //    {
+            //         for (int j = 0; j < triplets.Count; j++)
+            //        {
+            //            columnMatrix[i,j] = input[j][i];
+            //        }
+            //    }
+
+            //    //Perform Gram Schmidt ortho 
+            //    GramSchmidtOrthogonalization gsorth = new GramSchmidtOrthogonalization(columnMatrix);
+            //    double[,] Q = gsorth.OrthogonalFactor;
+            //    double[,] R = gsorth.UpperTriangularFactor;
+
+            //    //Back to original input format
+            //    for (int i = 0; i < statesCount; i++)
+            //    {
+            //        for (int j = 0; j < triplets.Count; j++)
+            //        {
+            //            input[j][i] = Q[i,j];
+            //        }
+            //    }
+            //}
         }
         static void GetTrainingSet(List<Triplet> triplets, out double[][] io)
         {
@@ -397,35 +423,9 @@ namespace NIPS
         }
         static void Main(string[] args)
         {
-            List<Sequence> trainingSet = new List<Sequence>();
-
-            List<Sequence> sequenceGoalDirected = new List<Sequence>() 
-            { 
-                new Sequence() { 2,6,10,14,18 },
-                new Sequence() { 2,6,10,9,8 },
-                new Sequence() { 2,6,10,11,12 }            
-            };
-
-            List<Sequence> sequenceShortcutsEasy = new List<Sequence>() 
-            { 
-                new Sequence() { 0,1,2,3,4 },
-                new Sequence() { 4,7,12,15,20 },
-                new Sequence() { 20,19,18,17,16},
-                new Sequence() { 8,9,10,11,12 },   
-                new Sequence() { 2,6,10,14,18 }           
-            };
-
-            List<Sequence> sequenceShortcuts = new List<Sequence>() 
-            { 
-                new Sequence() { 8,5,0,1,2,3,4,7,12  },
-                new Sequence() { 0,5,8,13,16 },
-                new Sequence() { 0,1,2,6,10,14,18,19,20 },
-                new Sequence() { 8,9,10,11,12,15,20,19,18,17,16 }            
-            };
-
-            //List<Sequence> setToUse = sequenceGoalDirected;
-            //List<Sequence> setToUse = sequenceShortcutsEasy;
-            //List<Sequence> setToUse = sequenceShortcuts;
+            Maze maze;
+            List<Sequence> setToUse;
+            //List<Sequence> 
             List<Sequence> setToUse = GenerateRandomSequences(10, 7);
 
             //Prepare the data
@@ -557,19 +557,66 @@ namespace NIPS
             }
         }
 
-
-        public static object DeepClone(object obj)
+        void Generate_21(out Maze maze, out List<Sequence> trainingSet)
         {
-            object objResult = null;
-            using (MemoryStream ms = new MemoryStream())
-            {
-                BinaryFormatter bf = new BinaryFormatter();
-                bf.Serialize(ms, obj);
+            maze = new Maze
+            (
+                new double[,]
+                {
+                    //0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20
+                    {0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},//0
+                    {1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},//1
+                    {0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},//2
+                    {0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},//3
+                    {0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},//4
+                    {1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},//5
+                    {0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},//6
+                    {0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},//7
+                    {0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},//8
+                    {0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},//9
 
-                ms.Position = 0;
-                objResult = bf.Deserialize(ms);
-            }
-            return objResult;
+                    {0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0},//10
+                    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},//11
+                    {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0},//12
+                    {0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0},//13
+                    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0},//14
+                    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},//15
+                    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0},//16
+                    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0},//17
+                    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0},//18
+                    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1},//19
+                    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0},//20
+                }
+            );
+
+            //Training set
+            List<Sequence> sequenceGoalDirected = new List<Sequence>() 
+            { 
+                new Sequence() { 2,6,10,14,18 },
+                new Sequence() { 2,6,10,9,8 },
+                new Sequence() { 2,6,10,11,12 }            
+            };
+
+            List<Sequence> sequenceShortcutsEasy = new List<Sequence>() 
+            { 
+                new Sequence() { 0,1,2,3,4 },
+                new Sequence() { 4,7,12,15,20 },
+                new Sequence() { 20,19,18,17,16},
+                new Sequence() { 8,9,10,11,12 },   
+                new Sequence() { 2,6,10,14,18 }           
+            };
+
+            List<Sequence> sequenceShortcuts = new List<Sequence>() 
+            { 
+                new Sequence() { 8,5,0,1,2,3,4,7,12  },
+                new Sequence() { 0,5,8,13,16 },
+                new Sequence() { 0,1,2,6,10,14,18,19,20 },
+                new Sequence() { 8,9,10,11,12,15,20,19,18,17,16 }            
+            };
+
+            List<Sequence> rndSequence = maze.GenerateRandomSequences(10,2);
+
+            trainingSet = sequenceGoalDirected;
         }
     }
 }
