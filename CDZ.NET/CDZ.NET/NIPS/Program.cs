@@ -41,7 +41,7 @@ namespace NIPS
         public int x1;
         public int g;
 
-        public String ToString()
+        override public String ToString()
         {
             return "G=" + g + "\tX0=" + x0 + "\tX1=" + x1;
         }
@@ -49,7 +49,151 @@ namespace NIPS
 
     class Program
     {
-        
+        const int MAX_RECURSIVE_DEPTH = 7;
+
+        static void Main(string[] args)
+        {
+            int VERBOSITY = 0;
+            StreamWriter logFile = new StreamWriter("logFileParallel.csv");
+
+            //---------------------------------------------  CREATE MAZE ---------------------------------------------
+            Maze maze;
+            Dictionary<string, List<Sequence> > setsToUse;
+            Generate_21(out maze, out setsToUse);
+            string mazeType = "mat_21";
+            //Generate_T(out maze, out setsToUse);
+            //string mazeType = "mat_T";
+
+            logFile.WriteLine("maze,trainingSet,testSet,performance,lengthPerformance,trainingError");
+
+            for (int run = 0; run < 100; run++)
+            {
+                Console.WriteLine("RUN NUMBER "+run);
+
+
+                //Loop through all the training sets
+                foreach (string trainSetName in setsToUse.Keys)
+                {
+                    List<Sequence> setToUse = setsToUse[trainSetName];
+                    Console.WriteLine("\n---------------------------------------------------------");
+                    Console.WriteLine("TRAINING SET : " + trainSetName);
+
+                    //---------------------------------------------  PREPARE DATA ---------------------------------------------
+                    bool forceBidirectionality = true;
+
+                    List<Triplet> triplets = GetTripletsFromSequences(setToUse, forceBidirectionality);
+                    if (VERBOSITY > 1)
+                    {
+                        Console.WriteLine("---------------------------------------------------------");
+                        Console.WriteLine("Training set elements");
+                        foreach (Triplet item in triplets)
+                        {
+                            Console.WriteLine(item.ToString());
+                        }
+                        Console.WriteLine("---------------------------------------------------------");
+                    }
+
+                    double[][] input;
+                    double[][] output;
+                    GetTrainingSet(maze, triplets, out input, out output);
+
+                    //FOR AUTOASSOCIATION
+                    //double[][] io;
+                    //GetTrainingSet(maze, triplets, out io);
+
+                    //---------------------------------------------  CREATE NETWORK ---------------------------------------------
+                    //Create the network & train
+                    //var function = new BipolarSigmoidFunction();
+                    var function = new SigmoidFunction(2.0);
+                    ActivationNetwork goalNetwork = goalNetwork = new ActivationNetwork(function, 2 * maze.StatesCount, 20, maze.StatesCount);
+                    ParallelResilientBackpropagationLearning goalTeacher = new ParallelResilientBackpropagationLearning(goalNetwork);
+                    //BackPropagationLearning goalTeacher = new BackPropagationLearning(goalNetwork);
+
+                    int epoch = 0;
+                    double stopError = 0.1;
+                    int resets = 0;
+                    double minimumErrorReached = double.PositiveInfinity;
+                    while (minimumErrorReached > stopError && resets < 10)
+                    {
+                        goalNetwork.Randomize();
+                        goalTeacher.Reset(0.0125);
+
+                        double error = double.PositiveInfinity;
+                        for (epoch = 0; epoch < 500 && error > stopError; epoch++)
+                        {
+                            error = goalTeacher.RunEpoch(input, output);
+                            //Console.WriteLine("Epoch " + epoch + " = \t" + error);
+
+                            if (error < minimumErrorReached)
+                            {
+                                minimumErrorReached = error;
+                                goalNetwork.Save("goalNetwork.mlp");
+                            }
+                        }
+                        //Console.Write("Reset (" + error+")->");
+                        Console.Write(".(" + error.ToString("N2") + ") ");
+                        resets++;
+                    }
+                    Console.WriteLine();
+                    Console.WriteLine("Best error obtained =" + minimumErrorReached);
+
+                    goalNetwork = ActivationNetwork.Load("goalNetwork.mlp") as ActivationNetwork;
+
+                    if (VERBOSITY > 0)
+                        GenerateReport(maze, triplets, goalNetwork);
+
+                    //---------------------------------------------  TEST ---------------------------------------------
+
+                    Console.WriteLine("------------------");
+                    Console.WriteLine("Finding paths...");
+
+                    Console.WriteLine("------------------");
+                    Console.WriteLine("TRAINED SEQUENCES");
+                    double score, lengthScore;
+                    List<Triplet> setToEvaluate = GenerateTestSet_FromTraining(setToUse);
+                    Evaluate(maze, goalNetwork, setToEvaluate, out score, out lengthScore);
+                    Console.WriteLine("Success percentage over training set = " + score + "% and lengthScore=" + lengthScore);
+                    logFile.WriteLine(mazeType + "," + trainSetName + "," + "TRAINED-SEQUENCES" + "," + score + "," + lengthScore + "," + minimumErrorReached);
+
+                    //---------------------------------------------
+
+                    Console.WriteLine("------------------");
+                    Console.WriteLine("1-LENGTH SEQUENCES");
+                    setToEvaluate = GenerateTestSet_1LengthPath(maze);
+                    Evaluate(maze, goalNetwork, setToEvaluate, out score, out lengthScore);
+                    Console.WriteLine("Success percentage over 1-length set = " + score + "% and lengthScore=" + lengthScore);
+                    logFile.WriteLine(mazeType + "," + trainSetName + "," + "1-LENGTH-SEQUENCES" + "," + score + "," + lengthScore + "," + minimumErrorReached);
+
+                    //---------------------------------------------
+                    Console.WriteLine("------------------");
+                    Console.WriteLine("RANDOM SEQUENCES Inc Training");
+                    int RANDOM_TRIALS = 100000;
+                    setToEvaluate = GenerateTestSet_RandomPair(maze, RANDOM_TRIALS, triplets, true);
+                    Evaluate(maze, goalNetwork, setToEvaluate, out score, out lengthScore);
+                    Console.WriteLine("Success percentage over " + RANDOM_TRIALS + " pairs = " + score + "% and lengthScore=" + lengthScore);
+                    logFile.WriteLine(mazeType + "," + trainSetName + "," + "RANDOM-SEQUENCES-Include-Training" + "," + score + "," + lengthScore + "," + minimumErrorReached);
+
+                    //---------------------------------------------
+                    Console.WriteLine("------------------");
+                    Console.WriteLine("RANDOM SEQUENCES Ex Training");
+                    RANDOM_TRIALS = 100000;
+                    setToEvaluate = GenerateTestSet_RandomPair(maze, RANDOM_TRIALS, triplets, false);
+                    Evaluate(maze, goalNetwork, setToEvaluate, out score, out lengthScore);
+                    Console.WriteLine("Success percentage over " + RANDOM_TRIALS + " pairs = " + score + "% and lengthScore=" + lengthScore);
+                    logFile.WriteLine(mazeType + "," + trainSetName + "," + "RANDOM-SEQUENCES-Exclude-Training" + "," + score + "," + lengthScore + "," + minimumErrorReached);
+                    //---------------------------------------------
+                    logFile.Flush();
+                    Console.WriteLine("Finding paths, over.");
+                    //Console.ReadKey();
+                }
+            }
+            logFile.Close();
+            Console.ReadKey();
+        }
+
+
+        #region FUNCTIONS
+
         static List<Triplet> GetTripletsFromSequence(Sequence s)
         {
             List<Triplet> results = new List<Triplet>();
@@ -119,7 +263,7 @@ namespace NIPS
                 io[i] = x0.Concat(g).ToArray().Concat(x1).ToArray();
             }
         }
-        static bool FindPath(Maze maze, ActivationNetwork network, int start, int end, ref List<int> path, bool hidePrintout = false)
+        static bool FindPath(Maze maze, ActivationNetwork network, int start, int end, ref List<int> path, ref int recursiveDepth, bool hidePrintout = false )
         {
             if (path.Count()>0 && path.Last() != start)
                 path.Add(start);
@@ -163,7 +307,18 @@ namespace NIPS
                             Console.WriteLine("Subgoal infinite loop (" + current + "-->" + maxIndex + ")");
                         return false;
                     }
-                    FindPath(maze, network, current, maxIndex, ref path, hidePrintout);
+                    if (recursiveDepth < MAX_RECURSIVE_DEPTH)
+                    {
+                        recursiveDepth++;
+                        FindPath(maze, network, current, maxIndex, ref path, ref recursiveDepth, hidePrintout);
+                        recursiveDepth--;
+                    }
+                    else
+                    {
+                        if (!hidePrintout)
+                            Console.WriteLine("Max depth level reached. Cancelled.");
+                        return false;
+                    }
                     if (path.Count()>0 && path.Last() == maxIndex)
                     {
                         if (!hidePrintout)
@@ -185,7 +340,7 @@ namespace NIPS
             }
             return true;
         }
-        static bool FindPath(Maze maze, DistanceNetwork network, int start, int end, ref List<int> path, bool hidePrintout = false)
+        static bool FindPath(Maze maze, DistanceNetwork network, int start, int end, ref List<int> path,ref int recursiveDepth, bool hidePrintout = false)
         {
             if (path.Count() > 0 && path.Last() != start)
                 path.Add(start);
@@ -234,7 +389,18 @@ namespace NIPS
                             Console.WriteLine("Subgoal infinite loop (" + current + "-->" + maxIndex + ")");
                         return false;
                     }
-                    FindPath(maze, network, current, maxIndex, ref path, hidePrintout);
+                    if (recursiveDepth < MAX_RECURSIVE_DEPTH)
+                    {
+                        recursiveDepth++;
+                        FindPath(maze, network, current, maxIndex, ref path, ref recursiveDepth, hidePrintout);
+                        recursiveDepth--;
+                    }
+                    else
+                    {
+                        if (!hidePrintout)
+                            Console.WriteLine("Max depth level reached. Cancelled.");
+                        return false;
+                    }
                     if (path.Count() > 0 && path.Last() == maxIndex)
                     {
                         if (!hidePrintout)
@@ -301,7 +467,8 @@ namespace NIPS
             Console.WriteLine("From " + start + " to " + end);
 
             List<int> path = new List<int>();
-            bool pathFound = FindPath(maze, network, start, end, ref path);
+            int rd = 0;
+            bool pathFound = FindPath(maze, network, start, end, ref path, ref rd);
 
             string pathStr = "Computed path = ";
             foreach (int step in path)
@@ -315,7 +482,8 @@ namespace NIPS
             Console.WriteLine("From " + start + " to " + end);
 
             List<int> path = new List<int>();
-            bool pathFound = FindPath(maze, network, start, end, ref path);
+            int rd = 0;
+            bool pathFound = FindPath(maze, network, start, end, ref path, ref rd);
 
             string pathStr = "Computed path = ";
             foreach (int step in path)
@@ -325,18 +493,11 @@ namespace NIPS
             Console.WriteLine(pathStr);
         }
 
-        static void ChooseRandomPair(out int start, out int end, Maze maze, List<Triplet> trainingSet, bool canBeSamePoint, bool canBePartOfTrainingSet)
+        static void ChooseRandomPair(out int start, out int end, Maze maze, List<Triplet> trainingSet, bool canBePartOfTrainingSet)
         {
             Random rand = new Random();
-
             start = rand.Next(maze.StatesCount);
             end = rand.Next(maze.StatesCount);
-
-            if (!canBeSamePoint)
-            {
-                while (start == end)
-                    end = rand.Next(maze.StatesCount);
-            }
 
             if (!canBePartOfTrainingSet)
             {
@@ -346,6 +507,11 @@ namespace NIPS
                     found = false;
                     start = rand.Next(maze.StatesCount);
                     end = rand.Next(maze.StatesCount);
+                    while(start==end)
+                    {
+                        start = rand.Next(maze.StatesCount);
+                        end = rand.Next(maze.StatesCount);
+                    }
                     foreach (Triplet t in trainingSet)
                     {
                         found = (t.x0 == start && t.g == end);
@@ -354,150 +520,65 @@ namespace NIPS
                     }
                 }
             }
-        }
-
-        static void Main(string[] args)
-        {
-            Maze maze;
-            List<Sequence> setToUse;
-            Generate_21(out maze, out setToUse);
-            //Generate_T(out maze, out setToUse);
-
-            //Prepare the data
-            bool forceBidirectionality = true;
-
-            List<Triplet> triplets = GetTripletsFromSequences(setToUse, forceBidirectionality);
-            foreach (Triplet item in triplets)
+            else
             {
-                Console.WriteLine(item.ToString());
-            }
-
-            double[][] input;
-            double[][] output;
-            GetTrainingSet(maze, triplets, out input, out output);
-            double[][] io;
-            GetTrainingSet(maze, triplets, out io);
-
-            bool useAutoAssociativeNetwork = false;
-
-            if (!useAutoAssociativeNetwork)
-            {
-                //Create the network & train
-                ActivationNetwork goalNetwork = goalNetwork = new ActivationNetwork(new SigmoidFunction(2.0), 2 * maze.StatesCount, 20, maze.StatesCount);
-                ParallelResilientBackpropagationLearning goalTeacher = new ParallelResilientBackpropagationLearning(goalNetwork);
-
-                double error = double.PositiveInfinity;
-                double stopError = 10.0;
-                while (error > stopError)
+                start = rand.Next(maze.StatesCount);
+                end = rand.Next(maze.StatesCount);
+                while (start == end)
                 {
-                    Console.WriteLine("Reset");
-                    goalNetwork.Randomize();
-                    //goalTeacher.Reset(0.0125);
-                    for (int epoch = 0; epoch < 500 && error > stopError; epoch++)
-                    {
-                        error = goalTeacher.RunEpoch(input, output);
-                        Console.WriteLine("Epoch " + epoch + " = \t" + error);
-                    }
+                    start = rand.Next(maze.StatesCount);
+                    end = rand.Next(maze.StatesCount);
                 }
-                GenerateReport(maze, triplets, goalNetwork);
-                goalNetwork.Save("goalNetwork.mlp");
-                //Test the network
-                Console.WriteLine("------------------");
-                Console.WriteLine("Finding paths...");
-
-                Console.WriteLine("------------------");
-                Console.WriteLine("TRAINED SEQUENCES");
-                foreach (Sequence seq in setToUse)
-                {
-                    ReportPath(maze, goalNetwork, seq.First(), seq.Last());
-                    //Console.WriteLine("Press a key to continue...");
-                    //Console.ReadKey();
-                }
-                Console.WriteLine("------------------");
-                Console.WriteLine("RANDOM SEQUENCES");
-                Random rand = new Random();
-
-                int success = 0;
-                int RANDOM_TRIALS = 100000;
-                for (int i = 0; i < RANDOM_TRIALS; i++)
-                {
-                    List<int> path = new List<int>();
-                    int startIndex,endIndex;
-                    ChooseRandomPair(out startIndex, out endIndex, maze, triplets, false, false);
-                    if (FindPath(maze, goalNetwork, startIndex, endIndex, ref path, true))
-                        success++;
-                }
-                Console.WriteLine("Success percentage over " + RANDOM_TRIALS + " = " + (100.0 * success / (double)RANDOM_TRIALS) + "%");
-
-                while (true)
-                {
-                    Console.WriteLine("Press a key to continue...");
-                    Console.ReadKey();
-                    ReportPath(maze, goalNetwork, rand.Next(maze.StatesCount), rand.Next(maze.StatesCount));
-                }
-                Console.WriteLine("Finding paths, over.");
-            }
-            else //AUTO ASSOCIATIVE
-            {
-                DistanceNetwork goalNetworkAuto = new DistanceNetwork(3 * maze.StatesCount, 400);
-                SOMLearning goalTeacherAuto = new SOMLearning(goalNetworkAuto);
-                goalTeacherAuto.LearningRate = 0.3;
-                goalTeacherAuto.LearningRadius = 5;
-                double error = double.PositiveInfinity;
-                double stopError = 0.01;
-                while (error > stopError)
-                {
-                    Console.WriteLine("Reset");
-                    goalNetworkAuto.Randomize();
-                    //goalTeacher.Reset(0.0125);
-                    for (int epoch = 0; epoch < 1500 && error > stopError; epoch++)
-                    {
-                        error = goalTeacherAuto.RunEpoch(io);
-                        Console.WriteLine("Epoch " + epoch + " = \t" + error);
-                    }
-                }
-                GenerateReport(maze, triplets, goalNetworkAuto);
-
-                //Test the network
-                Console.WriteLine("------------------");
-                Console.WriteLine("Finding paths...");
-
-                Console.WriteLine("------------------");
-                Console.WriteLine("TRAINED SEQUENCES");
-                foreach (Sequence seq in setToUse)
-                {
-                    ReportPath(maze, goalNetworkAuto, seq.First(), seq.Last());
-                    //Console.WriteLine("Press a key to continue...");
-                    //Console.ReadKey();
-                }
-                Console.WriteLine("------------------");
-                Console.WriteLine("RANDOM SEQUENCES");
-                Random rand = new Random();
-
-                int success = 0;
-                int RANDOM_TRIALS = 100000;
-                for (int i = 0; i < RANDOM_TRIALS; i++)
-                {
-                    List<int> path = new List<int>();
-                    int startIndex, endIndex;
-                    ChooseRandomPair(out startIndex, out endIndex, maze, triplets, false, false);
-                    if (FindPath(maze, goalNetworkAuto, startIndex, endIndex, ref path, true))
-                        success++;
-                }
-                Console.WriteLine("Success percentage over " + RANDOM_TRIALS + " = " + (100.0 * success / (double)RANDOM_TRIALS) + "%");
-
-                while (true)
-                {
-                    Console.WriteLine("Press a key to continue...");
-                    Console.ReadKey();
-                    ReportPath(maze, goalNetworkAuto, rand.Next(maze.StatesCount), rand.Next(maze.StatesCount));
-                }
-                Console.WriteLine("Finding paths, over.");
             }
         }
-
-        static void Generate_21(out Maze maze, out List<Sequence> trainingSet)
+        static void Evaluate(Maze maze, ActivationNetwork network, List<Triplet> setToEvaluate, out double score, out double lengthScore)
         {
+            int pathFoundCount = 0;
+            lengthScore = 0.0;
+            foreach (Triplet item in setToEvaluate)
+            {
+                List<int> path = new List<int>();
+                int rd = 0;
+                if (FindPath(maze, network, item.x0, item.g, ref path,ref rd, true))
+                {
+                    if (maze.DistMatrix[item.x0, item.g] == 0.0)
+                    {
+                        int bpHere = 0;
+                        bpHere += 0;
+                    }
+                    lengthScore += path.Count / maze.DistMatrix[item.x0, item.g];
+                    pathFoundCount++;
+                }
+            }
+            if (pathFoundCount>0)
+                lengthScore /= pathFoundCount;
+            score = 100.0 * pathFoundCount / (double)setToEvaluate.Count;
+        }
+
+        static void Evaluate(Maze maze, DistanceNetwork network, List<Triplet> setToEvaluate, out double score, out double lengthScore)
+        {
+            int pathFoundCount = 0;
+            lengthScore = 0.0;
+            foreach (Triplet item in setToEvaluate)
+            {
+                List<int> path = new List<int>();
+                int rd = 0;
+                if (FindPath(maze, network, item.x0, item.g, ref path, ref rd, true))
+                {
+                    lengthScore += path.Count / maze.DistMatrix[item.x0, item.g];
+                    pathFoundCount++;
+                }
+            }
+            if (pathFoundCount > 0)
+                lengthScore /= pathFoundCount;
+            score = 100.0 * pathFoundCount / (double)setToEvaluate.Count;
+        }
+        #endregion FUNCTIONS
+
+        #region MAZES
+        static void Generate_21(out Maze maze, out Dictionary<string, List<Sequence>> trainingSets)
+        {
+            Console.WriteLine("Using Maze-21");
             maze = new Maze
             (
                 new double[,]
@@ -553,13 +634,20 @@ namespace NIPS
                 new Sequence() { 8,9,10,11,12,15,20,19,18,17,16 }            
             };
 
-            List<Sequence> rndSequence = maze.GenerateRandomSequences(10,2);
+            List<Sequence> rndSequence10_5 = maze.GenerateRandomSequences(10, 5);
+            List<Sequence> rndSequence10_10 = maze.GenerateRandomSequences(10, 10);
 
-            trainingSet = sequenceShortcuts;// sequenceGoalDirected;
+            trainingSets = new Dictionary<string, List<Sequence>>();
+            trainingSets["sequenceGoalDirected"] = sequenceGoalDirected;
+            trainingSets["sequenceShortcutsEasy"] = sequenceShortcutsEasy;
+            trainingSets["sequenceShortcuts"] = sequenceShortcuts;
+            trainingSets["sequence_random_count=10_length=5"] = rndSequence10_5;
+            trainingSets["sequence_random_count=10_length=10"] = rndSequence10_10;
         }
 
-        static void Generate_T(out Maze maze, out List<Sequence> trainingSet)
+        static void Generate_T(out Maze maze, out Dictionary<string, List<Sequence> > trainingSets)
         {
+            Console.WriteLine("Using Maze-T");
             maze = new Maze
             (
                 new double[,]
@@ -599,10 +687,67 @@ namespace NIPS
                 new Sequence() { 4,3,2,5,6 },           
             };
 
-
-            List<Sequence> rndSequence = maze.GenerateRandomSequences(10, 2);
-
-            trainingSet = sequence_fullCoverage_overlap;// sequence_length2_full_coverage;
+            trainingSets = new Dictionary<string, List<Sequence>>();
+            trainingSets["sequence_length1_full_coverage"] = sequence_length1_full_coverage;
+            trainingSets["sequence_length2_full_coverage"] = sequence_length2_full_coverage;
+            trainingSets["sequence_fullCoverage_overlap"] = sequence_fullCoverage_overlap;
         }
+
+        #endregion MAZES
+        
+        #region TEST SETS
+        static List<Triplet> GenerateTestSet_1LengthPath(Maze maze)
+        {
+            List<Triplet> testSet = new List<Triplet>();
+            for (int i = 0; i < maze.StatesCount; i++)
+            {
+                for (int j = 0; j < maze.StatesCount; j++)
+                {
+                    if (maze.AdjMatrix[i,j] != 0.0)
+                    {
+                        Triplet t = new Triplet();
+                        t.x0 = i;
+                        t.x1 = j;
+                        t.g = j;
+                        testSet.Add(t);
+                    }
+                }                
+            }
+            return testSet;
+        }
+
+        static List<Triplet> GenerateTestSet_RandomPair(Maze maze, int count, List<Triplet> trainingSet, bool includeTrainingSet)
+        {
+            List<Triplet> testSet = new List<Triplet>();
+            for (int i = 0; i < count; i++)
+            {
+                int start, end;
+                ChooseRandomPair(out start, out end, maze, trainingSet, includeTrainingSet); //there can be duplicates within the test set...
+
+                Triplet t = new Triplet();
+                t.x0 = start;
+                t.x1 = end;
+                t.g = end;
+                testSet.Add(t);
+            }
+            return testSet;
+        }
+
+        static List<Triplet> GenerateTestSet_FromTraining(List<Sequence> trainingSet)
+        {
+            List<Triplet> testSet = new List<Triplet>();
+            for (int i = 0; i < trainingSet.Count; i++)
+            {
+                Triplet t = new Triplet();
+                t.x0 = trainingSet[i].First();
+                t.x1 = trainingSet[i].Last();
+                t.g = trainingSet[i].Last();
+                testSet.Add(t);
+            }
+            return testSet;
+        }
+    
+        #endregion TEST SETS
+
     }
 }
