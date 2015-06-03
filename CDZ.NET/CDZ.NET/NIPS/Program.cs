@@ -146,42 +146,23 @@ namespace NIPS
 
                     Console.WriteLine("------------------");
                     Console.WriteLine("Finding paths...");
-
-                    Console.WriteLine("------------------");
-                    Console.WriteLine("TRAINED SEQUENCES");
                     double score, lengthScore;
-                    List<Triplet> setToEvaluate = GenerateTestSet_FromTraining(setToUse);
-                    Evaluate(maze, goalNetwork, setToEvaluate, out score, out lengthScore);
+                    double[,] pathMatrix;
+                    ComputePathMatrix(maze, goalNetwork, out score, out lengthScore, out pathMatrix);
+
+                    Console.WriteLine("Success over whole input space = " + score + "% and lengthScore=" + lengthScore);
+                    logFile.WriteLine(mazeType + "," + trainSetName + "," + "whole-input-space" + "," + score + "," + lengthScore + "," + minimumErrorReached);
+ 
+                    List<Triplet> setToEvaluate = triplets;
+                    EvaluateSpecificSet(maze, pathMatrix, setToEvaluate, out score, out lengthScore);
                     Console.WriteLine("Success percentage over training set = " + score + "% and lengthScore=" + lengthScore);
-                    logFile.WriteLine(mazeType + "," + trainSetName + "," + "TRAINED-SEQUENCES" + "," + score + "," + lengthScore + "," + minimumErrorReached);
-
-                    //---------------------------------------------
-
-                    Console.WriteLine("------------------");
-                    Console.WriteLine("1-LENGTH SEQUENCES");
+                    logFile.WriteLine(mazeType + "," + trainSetName + "," + "training-set" + "," + score + "," + lengthScore + "," + minimumErrorReached);
+                    
                     setToEvaluate = GenerateTestSet_1LengthPath(maze);
-                    Evaluate(maze, goalNetwork, setToEvaluate, out score, out lengthScore);
+                    EvaluateSpecificSet(maze, pathMatrix, setToEvaluate, out score, out lengthScore);
                     Console.WriteLine("Success percentage over 1-length set = " + score + "% and lengthScore=" + lengthScore);
-                    logFile.WriteLine(mazeType + "," + trainSetName + "," + "1-LENGTH-SEQUENCES" + "," + score + "," + lengthScore + "," + minimumErrorReached);
-
-                    //---------------------------------------------
-                    Console.WriteLine("------------------");
-                    Console.WriteLine("RANDOM SEQUENCES Inc Training");
-                    int RANDOM_TRIALS = 100000;
-                    setToEvaluate = GenerateTestSet_RandomPair(maze, RANDOM_TRIALS, triplets, true);
-                    Evaluate(maze, goalNetwork, setToEvaluate, out score, out lengthScore);
-                    Console.WriteLine("Success percentage over " + RANDOM_TRIALS + " pairs = " + score + "% and lengthScore=" + lengthScore);
-                    logFile.WriteLine(mazeType + "," + trainSetName + "," + "RANDOM-SEQUENCES-Include-Training" + "," + score + "," + lengthScore + "," + minimumErrorReached);
-
-                    //---------------------------------------------
-                    Console.WriteLine("------------------");
-                    Console.WriteLine("RANDOM SEQUENCES Ex Training");
-                    RANDOM_TRIALS = 100000;
-                    setToEvaluate = GenerateTestSet_RandomPair(maze, RANDOM_TRIALS, triplets, false);
-                    Evaluate(maze, goalNetwork, setToEvaluate, out score, out lengthScore);
-                    Console.WriteLine("Success percentage over " + RANDOM_TRIALS + " pairs = " + score + "% and lengthScore=" + lengthScore);
-                    logFile.WriteLine(mazeType + "," + trainSetName + "," + "RANDOM-SEQUENCES-Exclude-Training" + "," + score + "," + lengthScore + "," + minimumErrorReached);
-                    //---------------------------------------------
+                    logFile.WriteLine(mazeType + "," + trainSetName + "," + "length-1-sequences" + "," + score + "," + lengthScore + "," + minimumErrorReached);
+                    
                     logFile.Flush();
                     Console.WriteLine("Finding paths, over.");
                     //Console.ReadKey();
@@ -531,48 +512,6 @@ namespace NIPS
                 }
             }
         }
-        static void Evaluate(Maze maze, ActivationNetwork network, List<Triplet> setToEvaluate, out double score, out double lengthScore)
-        {
-            int pathFoundCount = 0;
-            lengthScore = 0.0;
-            foreach (Triplet item in setToEvaluate)
-            {
-                List<int> path = new List<int>();
-                int rd = 0;
-                if (FindPath(maze, network, item.x0, item.g, ref path,ref rd, true))
-                {
-                    if (maze.DistMatrix[item.x0, item.g] == 0.0)
-                    {
-                        int bpHere = 0;
-                        bpHere += 0;
-                    }
-                    lengthScore += path.Count / maze.DistMatrix[item.x0, item.g];
-                    pathFoundCount++;
-                }
-            }
-            if (pathFoundCount>0)
-                lengthScore /= pathFoundCount;
-            score = 100.0 * pathFoundCount / (double)setToEvaluate.Count;
-        }
-
-        static void Evaluate(Maze maze, DistanceNetwork network, List<Triplet> setToEvaluate, out double score, out double lengthScore)
-        {
-            int pathFoundCount = 0;
-            lengthScore = 0.0;
-            foreach (Triplet item in setToEvaluate)
-            {
-                List<int> path = new List<int>();
-                int rd = 0;
-                if (FindPath(maze, network, item.x0, item.g, ref path, ref rd, true))
-                {
-                    lengthScore += path.Count / maze.DistMatrix[item.x0, item.g];
-                    pathFoundCount++;
-                }
-            }
-            if (pathFoundCount > 0)
-                lengthScore /= pathFoundCount;
-            score = 100.0 * pathFoundCount / (double)setToEvaluate.Count;
-        }
         #endregion FUNCTIONS
 
         #region MAZES
@@ -716,37 +655,64 @@ namespace NIPS
             return testSet;
         }
 
-        static List<Triplet> GenerateTestSet_RandomPair(Maze maze, int count, List<Triplet> trainingSet, bool includeTrainingSet)
+        static void ComputePathMatrix(Maze m, ActivationNetwork net, out double performance, out double avgLengthScore, out double[,] pathMatrix)
         {
-            List<Triplet> testSet = new List<Triplet>();
-            for (int i = 0; i < count; i++)
+            pathMatrix = new double[m.StatesCount, m.StatesCount];
+            int pathFoundCount = 0;
+            avgLengthScore = 0.0;
+            for (int i = 0; i < m.StatesCount; i++)
             {
-                int start, end;
-                ChooseRandomPair(out start, out end, maze, trainingSet, includeTrainingSet); //there can be duplicates within the test set...
+                for (int j = 0; j < m.StatesCount; j++)
+                {
+                    if (i == j)
+                    {
+                        pathMatrix[i, j] = 0.0;
+                    }
+                    else
+                    {
+                        List<int> path = new List<int>();
+                        int rd = 0;
+                        if (FindPath(m, net, i, j, ref path, ref rd, true))
+                        {
+                            pathMatrix[i, j] = path.Count;
+                            avgLengthScore += pathMatrix[i, j] / m.DistMatrix[i, j];
+                            pathFoundCount++;
+                        }
+                        else
+                        {
+                            pathMatrix[i, j] = double.PositiveInfinity;
+                        }
+                    }
 
-                Triplet t = new Triplet();
-                t.x0 = start;
-                t.x1 = end;
-                t.g = end;
-                testSet.Add(t);
+
+                    if (double.IsPositiveInfinity(pathMatrix[i, j]))
+                        Console.Write("0" + "\t");
+                    else
+                        Console.Write(pathMatrix[i, j].ToString("N0") + "\t");
+                }
+                Console.WriteLine();
             }
-            return testSet;
+
+            //Path found among all possible path (exclude diagonal)
+            performance = 100.0* pathFoundCount / ((double)m.StatesCount * m.StatesCount - m.StatesCount);
+            avgLengthScore /= pathFoundCount;
         }
 
-        static List<Triplet> GenerateTestSet_FromTraining(List<Sequence> trainingSet)
+        static void EvaluateSpecificSet(Maze maze, double[,] pathMatrix, List<Triplet> setToEvaluate, out double score, out double lengthScore)
         {
-            List<Triplet> testSet = new List<Triplet>();
-            for (int i = 0; i < trainingSet.Count; i++)
+            score = 0.0;
+            lengthScore = 0.0;
+            foreach (Triplet item in setToEvaluate)
             {
-                Triplet t = new Triplet();
-                t.x0 = trainingSet[i].First();
-                t.x1 = trainingSet[i].Last();
-                t.g = trainingSet[i].Last();
-                testSet.Add(t);
+                if(!double.IsPositiveInfinity(pathMatrix[item.x0, item.g]))
+                {
+                    score += 1.0;
+                    lengthScore += (pathMatrix[item.x0, item.g] / (double)maze.DistMatrix[item.x0, item.g]);
+                }
             }
-            return testSet;
+            score = 100.0 * score / (double)setToEvaluate.Count;
+            lengthScore = lengthScore / (double)setToEvaluate.Count;
         }
-    
         #endregion TEST SETS
 
     }
