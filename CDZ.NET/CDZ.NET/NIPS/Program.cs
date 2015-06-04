@@ -18,6 +18,7 @@ using Accord.Math;
 
 namespace NIPS
 {
+    #region Datastructure
     [Serializable]
     class Sequence : List<int>
     {
@@ -46,6 +47,7 @@ namespace NIPS
             return "G=" + g + "\tX0=" + x0 + "\tX1=" + x1;
         }
     }
+    #endregion Datastructure
 
     class Program
     {
@@ -64,12 +66,15 @@ namespace NIPS
             //Generate_T(out maze, out setsToUse);
             //string mazeType = "mat_T";
 
-            logFile.WriteLine("maze,trainingSet,testSet,performance,lengthPerformance,trainingError");
+            //double randomPathQuality = 0.0;
+            //ComputePathQualityRandom(maze, out randomPathQuality, 1000);
+            //Console.WriteLine("Random Path Quality = " + randomPathQuality.ToString("N2"));
 
-            for (int run = 0; run < 100; run++)
+            logFile.WriteLine("maze,trainingSet,trainSetSize,testSet,performance,lengthPerformance,trainingError");
+
+            for (int run = 0; run < 10; run++)
             {
                 Console.WriteLine("RUN NUMBER "+run);
-
 
                 //Loop through all the training sets
                 foreach (string trainSetName in setsToUse.Keys)
@@ -113,7 +118,7 @@ namespace NIPS
                     double stopError = 0.1;
                     int resets = 0;
                     double minimumErrorReached = double.PositiveInfinity;
-                    while (minimumErrorReached > stopError && resets < 10)
+                    while (minimumErrorReached > stopError && resets < 1)
                     {
                         goalNetwork.Randomize();
                         goalTeacher.Reset(0.0125);
@@ -148,20 +153,20 @@ namespace NIPS
                     Console.WriteLine("Finding paths...");
                     double score, lengthScore;
                     double[,] pathMatrix;
-                    ComputePathMatrix(maze, goalNetwork, out score, out lengthScore, out pathMatrix);
+                    ComputePathMatrix(maze, goalNetwork, out score, out lengthScore, out pathMatrix, trainSetName);
 
-                    Console.WriteLine("Success over whole input space = " + score + "% and lengthScore=" + lengthScore);
-                    logFile.WriteLine(mazeType + "," + trainSetName + "," + "whole-input-space" + "," + score + "," + lengthScore + "," + minimumErrorReached);
+                    Console.WriteLine("Success over whole input space = " + score.ToString("N2") + "% and lengthScore=" + lengthScore.ToString("N2"));
+                    logFile.WriteLine(mazeType + "," + trainSetName + "," + triplets.Count + "," + "whole-input-space" + "," + score + "," + lengthScore + "," + minimumErrorReached);
  
                     List<Triplet> setToEvaluate = triplets;
                     EvaluateSpecificSet(maze, pathMatrix, setToEvaluate, out score, out lengthScore);
-                    Console.WriteLine("Success percentage over training set = " + score + "% and lengthScore=" + lengthScore);
-                    logFile.WriteLine(mazeType + "," + trainSetName + "," + "training-set" + "," + score + "," + lengthScore + "," + minimumErrorReached);
+                    Console.WriteLine("Success percentage over training set = " + score.ToString("N2") + "% and lengthScore=" + lengthScore.ToString("N2"));
+                    logFile.WriteLine(mazeType + "," + trainSetName + "," + triplets.Count + "," + "training-set" + "," + score + "," + lengthScore + "," + minimumErrorReached);
                     
                     setToEvaluate = GenerateTestSet_1LengthPath(maze);
                     EvaluateSpecificSet(maze, pathMatrix, setToEvaluate, out score, out lengthScore);
-                    Console.WriteLine("Success percentage over 1-length set = " + score + "% and lengthScore=" + lengthScore);
-                    logFile.WriteLine(mazeType + "," + trainSetName + "," + "length-1-sequences" + "," + score + "," + lengthScore + "," + minimumErrorReached);
+                    Console.WriteLine("Success percentage over 1-length set = " + score.ToString("N2") + "% and lengthScore=" + lengthScore.ToString("N2"));
+                    logFile.WriteLine(mazeType + "," + trainSetName + "," + triplets.Count + "," + "length-1-sequences" + "," + score + "," + lengthScore + "," + minimumErrorReached);
                     
                     logFile.Flush();
                     Console.WriteLine("Finding paths, over.");
@@ -244,12 +249,13 @@ namespace NIPS
                 io[i] = x0.Concat(g).ToArray().Concat(x1).ToArray();
             }
         }
-        static bool FindPath(Maze maze, ActivationNetwork network, int start, int end, ref List<int> path, ref int recursiveDepth, bool hidePrintout = false )
+        static bool FindPath(Maze maze, ActivationNetwork network, int start, int end, ref List<int> path, ref int recursiveDepth,ref int recursionLevelReached, bool hidePrintout = false )
         {
-            if (path.Count()>0 && path.Last() != start)
+            if (path.Count == 0 || (path.Count() > 0 && path.Last() != start))
                 path.Add(start);
             int current = start;
             int goal = end;
+            recursionLevelReached = Math.Max(recursionLevelReached, recursiveDepth);
 
             while (current != goal)
             {
@@ -291,7 +297,7 @@ namespace NIPS
                     if (recursiveDepth < MAX_RECURSIVE_DEPTH)
                     {
                         recursiveDepth++;
-                        FindPath(maze, network, current, maxIndex, ref path, ref recursiveDepth, hidePrintout);
+                        FindPath(maze, network, current, maxIndex, ref path, ref recursiveDepth, ref recursionLevelReached, hidePrintout);
                         recursiveDepth--;
                     }
                     else
@@ -449,7 +455,8 @@ namespace NIPS
 
             List<int> path = new List<int>();
             int rd = 0;
-            bool pathFound = FindPath(maze, network, start, end, ref path, ref rd);
+            int rdreached = 0;
+            bool pathFound = FindPath(maze, network, start, end, ref path, ref rd, ref rdreached);
 
             string pathStr = "Computed path = ";
             foreach (int step in path)
@@ -573,15 +580,30 @@ namespace NIPS
                 new Sequence() { 8,9,10,11,12,15,20,19,18,17,16 }            
             };
 
-            List<Sequence> rndSequence10_5 = maze.GenerateRandomSequences(10, 5);
-            List<Sequence> rndSequence10_10 = maze.GenerateRandomSequences(10, 10);
+            //List<Sequence> rndSequence10_5 = maze.GenerateRandomSequences(10, 5);
+            //List<Sequence> rndSequence10_10 = maze.GenerateRandomSequences(10, 10);
 
             trainingSets = new Dictionary<string, List<Sequence>>();
-            trainingSets["sequenceGoalDirected"] = sequenceGoalDirected;
-            trainingSets["sequenceShortcutsEasy"] = sequenceShortcutsEasy;
-            trainingSets["sequenceShortcuts"] = sequenceShortcuts;
-            trainingSets["sequence_random_count=10_length=5"] = rndSequence10_5;
-            trainingSets["sequence_random_count=10_length=10"] = rndSequence10_10;
+            //trainingSets["sequenceGoalDirected"] = sequenceGoalDirected;
+            //trainingSets["whole-coverage-no-overlap"] = sequenceShortcutsEasy;
+            //trainingSets["whole-coverage-overlap"] = sequenceShortcuts;
+            //trainingSets["sequence_random_count=10_length=5"] = rndSequence10_5;
+            //trainingSets["sequence_random_count=10_length=10"] = rndSequence10_10;
+
+            //for (int seqCount = 5; seqCount <= 20; seqCount += 5)
+            //{
+            //    for (int seqLength = 2; seqLength <= 10; seqLength += 1)
+            //    {
+            //        trainingSets["sequence_random_count=" + seqCount + "_length=" + seqLength] = maze.GenerateRandomSequences(seqCount, seqLength);
+            //    }
+            //}
+
+            //Generate full covering random sequences
+            for (int seeds = 3; seeds <= 10; seeds += 1)
+            {
+                trainingSets["rnd_full_coverage_no_overlap=" + seeds] = maze.GenerateFullCoverage(seeds,false);
+                trainingSets["rnd_full_coverage_overlap=" + seeds] = maze.GenerateFullCoverage(seeds, true);
+            }
         }
 
         static void Generate_T(out Maze maze, out Dictionary<string, List<Sequence> > trainingSets)
@@ -654,9 +676,60 @@ namespace NIPS
             }
             return testSet;
         }
-
-        static void ComputePathMatrix(Maze m, ActivationNetwork net, out double performance, out double avgLengthScore, out double[,] pathMatrix)
+        static void ComputePathQualityRandom(Maze m, out double avgLengthScore, int trials)
         {
+            StreamWriter log = new StreamWriter("logRandomWalk.csv");
+            log.WriteLine("start,end,rndLength,optimalLength");
+
+            Random rand = new Random();
+            avgLengthScore = 0.0;
+            int pathFoundCount = 0;
+            for (int i = 0; i < m.StatesCount; i++)
+            {
+                for (int j = 0; j < m.StatesCount; j++)
+                {
+                    if (i != j)
+                    {
+                        for (int trial = 0; trial < trials; trial++)
+                        {
+                            List<int> path = new List<int>();
+                            int currentState = i;
+                            bool pathFound = false;
+                            while (!pathFound)
+                            {
+                                bool impass = false;
+                                while (currentState != j && !impass)
+                                {
+                                    List<int> vMoves = m.ValidMoves(currentState);
+                                    while (vMoves.Count>0 && path.Contains(currentState = vMoves[rand.Next(vMoves.Count)]))
+                                        vMoves.Remove(currentState);
+                                    if (vMoves.Count == 0)
+                                        impass = true;
+                                    else
+                                        path.Add(currentState);
+                                }
+                                pathFound = !impass;
+                            }
+
+                            pathFoundCount++;
+                            avgLengthScore += path.Count / m.DistMatrix[i, j];
+                            log.WriteLine(i+","+j+","+path.Count+","+m.DistMatrix[i, j]);
+                        }
+                    }
+                }
+            }
+            //Path found among all possible path (exclude diagonal)
+            avgLengthScore /= (double)pathFoundCount;
+            log.Close();
+        }
+
+        static void ComputePathMatrix(Maze m, ActivationNetwork net, out double performance, out double avgLengthScore, out double[,] pathMatrix, string trainingSetTag)
+        {
+            bool shouldWriteHeaders = !File.Exists("logPathMatrix.csv");
+            StreamWriter log = new StreamWriter("logPathMatrix.csv",true);
+            if (shouldWriteHeaders)
+                log.WriteLine("trainingset,start,end,path,pathLength,optimalLength,recursionLevel");
+
             pathMatrix = new double[m.StatesCount, m.StatesCount];
             int pathFoundCount = 0;
             avgLengthScore = 0.0;
@@ -672,9 +745,10 @@ namespace NIPS
                     {
                         List<int> path = new List<int>();
                         int rd = 0;
-                        if (FindPath(m, net, i, j, ref path, ref rd, true))
+                        int rdreached = 0;
+                        if (FindPath(m, net, i, j, ref path, ref rd, ref rdreached, true))
                         {
-                            pathMatrix[i, j] = path.Count;
+                            pathMatrix[i, j] = path.Count -1;
                             avgLengthScore += pathMatrix[i, j] / m.DistMatrix[i, j];
                             pathFoundCount++;
                         }
@@ -682,36 +756,60 @@ namespace NIPS
                         {
                             pathMatrix[i, j] = double.PositiveInfinity;
                         }
+
+
+                        string pathStr = "";
+                        foreach (int item in path)
+	                    {
+		                    pathStr += item+"->";
+	                    }
+                        log.WriteLine(trainingSetTag + "," + i + "," + j + "," + pathStr + "," + pathMatrix[i, j] + "," + m.DistMatrix[i, j] + "," + rdreached);
                     }
 
-
-                    if (double.IsPositiveInfinity(pathMatrix[i, j]))
-                        Console.Write("0" + "\t");
-                    else
-                        Console.Write(pathMatrix[i, j].ToString("N0") + "\t");
+                    //if (double.IsPositiveInfinity(pathMatrix[i, j]))
+                    //    Console.Write("." + "\t");
+                    //else
+                    //    Console.Write(pathMatrix[i, j].ToString("N0") + "\t");
                 }
-                Console.WriteLine();
+                //Console.WriteLine();
             }
 
             //Path found among all possible path (exclude diagonal)
             performance = 100.0* pathFoundCount / ((double)m.StatesCount * m.StatesCount - m.StatesCount);
             avgLengthScore /= pathFoundCount;
+            log.Close();
         }
 
         static void EvaluateSpecificSet(Maze maze, double[,] pathMatrix, List<Triplet> setToEvaluate, out double score, out double lengthScore)
         {
             score = 0.0;
             lengthScore = 0.0;
+            int totalElementsNonID = 0;
+            int totalElementsID = 0;
+            int totalElements = 0;
             foreach (Triplet item in setToEvaluate)
             {
-                if(!double.IsPositiveInfinity(pathMatrix[item.x0, item.g]))
+                if (item.x0 == item.g)
                 {
-                    score += 1.0;
-                    lengthScore += (pathMatrix[item.x0, item.g] / (double)maze.DistMatrix[item.x0, item.g]);
+                    totalElementsID++;
+                }
+                else
+                {
+                    totalElements++;
+                    if (!double.IsPositiveInfinity(pathMatrix[item.x0, item.g]))
+                    {
+                        totalElementsNonID++;
+                        score += 1.0;
+                        lengthScore += (pathMatrix[item.x0, item.g] / (double)maze.DistMatrix[item.x0, item.g]);
+                    }
                 }
             }
-            score = 100.0 * score / (double)setToEvaluate.Count;
-            lengthScore = lengthScore / (double)setToEvaluate.Count;
+            if (totalElementsID>0)
+            {
+                Console.WriteLine("Warning: this set contained "+totalElementsID+" identical elements (goal == start)");
+            }
+            score = 100.0 * score / (double)totalElements;
+            lengthScore = lengthScore / (double)totalElementsNonID;
         }
         #endregion TEST SETS
 
