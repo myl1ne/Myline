@@ -116,12 +116,94 @@ namespace NIPS
                     }
                 }
 
-                if (!couldAddOneNode )
+                if (!couldAddOneNode)
                 {
+                    //return (nonCoveredNodes.Count < 0.2 * StatesCount);
                     //Console.WriteLine("Warning: Node(s) non covered. Recursive call.");
-                    return false;
+                    //foreach(nonCoveredNodes.)
+                    //return false;
+                    break;
                 }
             }
+
+            //Remove the single nodes
+            List<Sequence> oneNodeSeqs = new List<Sequence>();
+            foreach(Sequence s in seqs)
+            {
+                if (s.Count <= 1)
+                    oneNodeSeqs.Add(s);
+            }
+            foreach (Sequence s in oneNodeSeqs)
+                seqs.Remove(s);
+
+            //Detect the missing edges and add small sequences
+            double[,] coveringMatrix = new double[StatesCount, StatesCount];
+            foreach (Sequence s in seqs)
+            {
+                for (int i = 1; i < s.Count -1; i++)
+                {
+                    coveringMatrix[s[i - 1], s[i]] = 1.0;
+                    coveringMatrix[s[i], s[i + 1]] = 1.0;
+                    coveringMatrix[s[i], s[i - 1]] = 1.0;
+                    coveringMatrix[s[i + 1], s[i]] = 1.0;
+                }
+            }
+
+            for (int i = 0; i < StatesCount; i++)
+            {
+                List<int> nextNodes = ValidMoves(i);
+                foreach (int j in nextNodes)
+                {
+                    if (coveringMatrix[i, j] == 0.0)
+                    {
+                        bool extendedSeq = false;
+                        foreach (Sequence s in seqs)
+                        {
+
+                            if (s.Last() == i)
+                            {
+                                extendedSeq = true;
+                                s.Add(j);
+                            }
+                            else if (s.First() == i)
+                            {
+                                extendedSeq = true;
+                                s.Insert(0, j);
+                            }
+                            else if (s.Last() == j)
+                            {
+                                extendedSeq = true;
+                                s.Add(i);
+                            }
+                            else if (s.First() == j)
+                            {
+                                extendedSeq = true;
+                                s.Insert(0, i);
+                            }
+
+                            if (extendedSeq)
+                                break;
+                        }
+
+                        if (!extendedSeq)
+                        {
+                            Sequence gapSequence = new Sequence() { i, j };
+                            seqs.Add(gapSequence);
+                        }
+
+                        coveringMatrix[i, j] = 1.0;
+                        coveringMatrix[j, i] = 1.0;
+                    }
+                }
+            }
+
+
+            //if we generated without overlap we extend the sequence of one node so that they are connected
+            //if (!allowOverlap)
+            //{
+            //    foreach (Sequence s in seqs)
+            //        ExpandSequence(s, 1);
+            //}
             return true;
         }
 
@@ -129,6 +211,13 @@ namespace NIPS
         {
             List<Sequence> seqs;
             while (!TryToGeneratebestCoverage(seeds,out seqs, allowOverlap)) ;
+            return seqs;
+        }
+
+        public List<Sequence> GenerateFullCoverageNoLink(int seeds)
+        {
+            List<Sequence> seqs;
+            while (!TryToGeneratebestCoverage(seeds, out seqs, false)) ;
             return seqs;
         }
         //public List<Sequence> GenerateFullCoverageWithOverlap(int seeds, int length)
@@ -149,20 +238,24 @@ namespace NIPS
         ///// Expand the sequence from begining & end
         ///// </summary>
         ///// <param name="elements"></param>
-        //public void ExpandSequence(Sequence s, int elements)
-        //{
-        //    Random rand = new Random();
-        //    for (int i = 0; i < elements; i++)
-        //    {
-        //        List<int> neighborsStart = ValidMoves(s.First());
-        //        int n = neighborsStart[rand.Next(neighborsStart.Count)];
-        //        s.Insert(0, n);
+        public void ExpandSequence(Sequence s, int elements)
+        {
+            Random rand = new Random();
+            for (int i = 0; i < elements; i++)
+            {
+                List<int> neighborsStart = ValidMoves(s.First());
+                int n = neighborsStart[rand.Next(neighborsStart.Count)];
+                while(s.Contains(n))
+                    n = neighborsStart[rand.Next(neighborsStart.Count)];
+                s.Insert(0, n);
 
-        //        List<int> neighborsEnd = ValidMoves(s.Last());
-        //        n = neighborsEnd[rand.Next(neighborsEnd.Count)];
-        //        s.Add(n);
-        //    }
-        //}
+                List<int> neighborsEnd = ValidMoves(s.Last());
+                n = neighborsEnd[rand.Next(neighborsEnd.Count)];
+                while (s.Contains(n))
+                    n = neighborsStart[rand.Next(neighborsEnd.Count)];
+                s.Add(n);
+            }
+        }
 
         void ComputeDistMatrix()
         {
