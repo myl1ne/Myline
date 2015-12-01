@@ -31,6 +31,42 @@ namespace NIPS
             this.AdjMatrix = adjMatrix.Clone() as double[,];
             ComputeDistMatrix();
         }
+        //public List<Sequence> CoverWithRndWalk()
+        //{
+        //    Random rand = new Random();
+        //    List<Sequence> seqs = new List<Sequence>();
+       
+        //    List<int> nonCoveredNodes = new List<int>();
+        //    for (int i = 0; i < StatesCount; i++)
+        //        nonCoveredNodes.Add(i);
+
+        //    int currentState = rand.Next(StatesCount);
+        //    Sequence walk = new Sequence() { currentState };
+
+        //    while (nonCoveredNodes.Count > 0)
+        //    {
+        //        if (nonCoveredNodes.Contains(currentState))
+        //        {
+        //            walk.Add(currentState);
+        //        }
+        //        nonCoveredNodes.Remove(walk.Last());
+        //        //Take all the neigbhors but the element we just passed
+        //        List<int> neighboors = ValidMoves(walk.Last());
+        //        if (neighboors.Count > 1 && walk.Count > 2)
+        //            neighboors.Remove(walk[walk.Count - 2]);
+
+        //        List<int> nonCoveredNeighbors = nonCoveredNodes.Intersect(neighboors).ToList();
+
+        //        int next;
+        //        if (nonCoveredNeighbors.Count > 0)
+        //            next = nonCoveredNeighbors[rand.Next(nonCoveredNeighbors.Count)];
+        //        else
+        //            next = neighboors[rand.Next(neighboors.Count)];
+                
+        //        walk.Add(next);
+        //    }
+        //    return new List<Sequence>() { walk };
+        //}
 
         public List<Sequence> GenerateRandomSequences(int count, int lenght)
         {
